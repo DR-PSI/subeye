@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SubEye — จัดการผู้ใช้และสิทธิ์</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#04070d; }
+  body { font-family:'IBM Plex Sans Thai', system-ui, sans-serif; -webkit-font-smoothing:antialiased; color:#e9f1fb; }
+  * { box-sizing:border-box; }
+  a { color:#00e5ff; text-decoration:none; }
+  @keyframes seBlip { 0%{opacity:.25;transform:scale(.7)} 50%{opacity:1;transform:scale(1)} 100%{opacity:.25;transform:scale(.7)} }
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb { background:rgba(140,180,255,.16); border-radius:8px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  .navitem:hover { background:rgba(140,180,255,.06); }
+  .icobtn:hover { color:#00e5ff !important; border-color:rgba(0,229,255,.4) !important; }
+  .chip { cursor:pointer; }
+  .rowh:hover { background:rgba(140,180,255,.04); }
+  .primary:hover { filter:brightness(1.08); }
+  .ghost:hover { background:rgba(140,180,255,.06); }
+  input.search { background:rgba(255,255,255,.03); border:1px solid rgba(140,180,255,.14); border-radius:9px; color:#e9f1fb; font-family:'IBM Plex Sans Thai',sans-serif; font-size:13px; padding:0 14px; height:36px; outline:none; }
+  input.search::placeholder { color:#5b6579; }
+  input.search:focus { border-color:rgba(0,229,255,.4); }
+  select.rsel { background:rgba(255,255,255,.03); border:1px solid rgba(140,180,255,.14); border-radius:8px; color:#c8d3e6; font-family:'IBM Plex Sans Thai',sans-serif; font-size:12.5px; padding:6px 10px; outline:none; }
+</style>
+</head>
+<body>
+
+<div style="min-height:100vh; background:
+     radial-gradient(1100px 520px at 78% -12%, rgba(139,107,255,.16), transparent 70%),
+     radial-gradient(900px 460px at 8% -8%, rgba(0,229,255,.14), transparent 70%),
+     #04070d; position:relative; overflow:hidden;">
+
+  <div style="display:grid; grid-template-columns:236px 1fr; min-height:100vh;">
+
+    <!-- Sidebar -->
+    <div style="border-right:1px solid rgba(140,180,255,.10); padding:22px 16px; display:flex; flex-direction:column; gap:26px; background:rgba(255,255,255,.014);">
+      <div style="display:flex; align-items:center; gap:12px; padding:0 6px;">
+        <div style="width:36px; height:36px; border-radius:10px; border:1px solid rgba(140,180,255,.18); background:radial-gradient(circle at 35% 30%,#0d2230,#04070d); display:flex; align-items:center; justify-content:center;">
+          <div style="width:16px; height:16px; border-radius:50%; border:2px solid #00e5ff; position:relative;">
+            <div style="position:absolute; inset:0; margin:auto; width:5px; height:5px; border-radius:50%; background:#8b6bff;"></div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:15px; font-weight:600; letter-spacing:.02em;">SubEye</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#6f7c93; letter-spacing:.18em;">V2 · CONTROL</div>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:4px;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#556277; letter-spacing:.2em; padding:0 8px 8px;">MONITOR</div>
+
+        <div class="navitem" style="display:flex; align-items:center; gap:11px; padding:10px 10px; border-radius:10px; cursor:pointer; font-size:14px; border:1px solid transparent;">
+          <div style="width:26px; height:26px; border-radius:8px; display:flex; align-items:center; justify-content:center; background:rgba(140,180,255,.07); color:#7e8ba3; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700;">DB</div>
+          <div style="flex:1; color:#8a97ad;">ภาพรวมทั้งเขต</div>
+          <div style="width:5px; height:5px; border-radius:50%; background:transparent;"></div>
+        </div>
+        <div class="navitem" style="display:flex; align-items:center; gap:11px; padding:10px 10px; border-radius:10px; cursor:pointer; font-size:14px; border:1px solid transparent;">
+          <div style="width:26px; height:26px; border-radius:8px; display:flex; align-items:center; justify-content:center; background:rgba(140,180,255,.07); color:#7e8ba3; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700;">ST</div>
+          <div style="flex:1; color:#8a97ad;">สถานี / อุปกรณ์</div>
+          <div style="width:5px; height:5px; border-radius:50%; background:transparent;"></div>
+        </div>
+        <div class="navitem" style="display:flex; align-items:center; gap:11px; padding:10px 10px; border-radius:10px; cursor:pointer; font-size:14px; border:1px solid transparent;">
+          <div style="width:26px; height:26px; border-radius:8px; display:flex; align-items:center; justify-content:center; background:rgba(140,180,255,.07); color:#7e8ba3; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700;">ML</div>
+          <div style="flex:1; color:#8a97ad;">สุขภาพอุปกรณ์</div>
+          <div style="width:5px; height:5px; border-radius:50%; background:transparent;"></div>
+        </div>
+        <div class="navitem" style="display:flex; align-items:center; gap:11px; padding:10px 10px; border-radius:10px; cursor:pointer; font-size:14px; border:1px solid transparent;">
+          <div style="width:26px; height:26px; border-radius:8px; display:flex; align-items:center; justify-content:center; background:rgba(140,180,255,.07); color:#7e8ba3; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700;">TR</div>
+          <div style="flex:1; color:#8a97ad;">รายละเอียดอุปกรณ์</div>
+          <div style="width:5px; height:5px; border-radius:50%; background:transparent;"></div>
+        </div>
+        <div class="navitem" style="display:flex; align-items:center; gap:11px; padding:10px 10px; border-radius:10px; cursor:pointer; font-size:14px; border:1px solid transparent;">
+          <div style="width:26px; height:26px; border-radius:8px; display:flex; align-items:center; justify-content:center; background:rgba(140,180,255,.07); color:#7e8ba3; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700;">AL</div>
+          <div style="flex:1; color:#8a97ad;">แจ้งเตือน</div>
+          <div style="width:5px; height:5px; border-radius:50%; background:transparent;"></div>
+        </div>
+
+        <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#556277; letter-spacing:.2em; padding:14px 8px 8px;">ADMIN</div>
+
+        <div class="navitem" style="display:flex; align-items:center; gap:11px; padding:10px 10px; border-radius:10px; cursor:pointer; font-size:14px; border:1px solid rgba(0,229,255,.18); background:rgba(0,229,255,.05);">
+          <div style="width:26px; height:26px; border-radius:8px; display:flex; align-items:center; justify-content:center; background:rgba(0,229,255,.14); color:#00e5ff; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700;">UA</div>
+          <div style="flex:1; color:#e9f1fb;">ผู้ใช้ &amp; สิทธิ์</div>
+          <div style="width:5px; height:5px; border-radius:50%; background:#00e5ff;"></div>
+        </div>
+      </div>
+
+      <div style="margin-top:auto; display:flex; flex-direction:column; gap:10px;">
+        <div style="border:1px solid rgba(140,180,255,.12); border-radius:12px; padding:12px; background:rgba(255,255,255,.022);">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-size:12.5px; color:#9aa7be;">Auto-simulate</div>
+            <div style="width:38px; height:21px; border-radius:11px; background:rgba(0,229,255,.35); position:relative;">
+              <div style="position:absolute; top:2px; left:19px; width:17px; height:17px; border-radius:50%; background:#e9f1fb;"></div>
+            </div>
+          </div>
+          <div style="margin-top:8px; font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:.14em; color:#6f7c93;">ON · 3S TICK</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; padding:8px 6px;">
+          <div style="width:28px; height:28px; border-radius:50%; background:linear-gradient(140deg,#00e5ff,#8b6bff); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#04070d;">P</div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:12.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">ผู้ควบคุมกะดึก</div>
+            <div style="font-size:10.5px; color:#6f7c93;">MEA · Operations</div>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#6f7c93; cursor:pointer; letter-spacing:.1em;">OUT</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div style="min-width:0; display:flex; flex-direction:column;">
+
+      <div style="display:flex; align-items:center; gap:18px; padding:16px 28px; border-bottom:1px solid rgba(140,180,255,.10); background:rgba(4,7,13,.6); backdrop-filter:blur(14px); position:sticky; top:0; z-index:20;">
+        <div style="min-width:0;">
+          <div style="font-size:19px; font-weight:600; letter-spacing:-.01em;">ผู้ใช้ &amp; สิทธิ์</div>
+          <div style="font-size:12px; color:#7e8ba3;">จัดการบัญชีผู้ใช้ บทบาท และขอบเขตการเข้าถึงของ SubEye</div>
+        </div>
+        <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+          <div style="display:flex; align-items:center; gap:8px; height:34px; padding:0 12px; border-radius:9px; border:1px solid rgba(140,180,255,.12); background:rgba(255,255,255,.022);">
+            <div style="width:6px; height:6px; border-radius:50%; background:#2ce8a4; animation:seBlip 2.2s infinite;"></div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#9aa7be; letter-spacing:.1em;">LIVE 02:41:09</div>
+          </div>
+          <div class="primary" style="height:34px; padding:0 16px; display:flex; align-items:center; gap:8px; border-radius:9px; background:linear-gradient(120deg,#00e5ff,#5cc8ff); color:#04121a; font-size:12.5px; font-weight:600; cursor:pointer;">+ เชิญผู้ใช้ใหม่</div>
+        </div>
+      </div>
+
+      <div style="padding:26px 28px 60px; min-width:0;">
+        <div style="display:flex; flex-direction:column; gap:18px;">
+
+          <!-- KPI row -->
+          <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px;">
+            <div style="border:1px solid rgba(140,180,255,.12); border-radius:16px; padding:17px 19px; background:rgba(255,255,255,.026);">
+              <div style="font-size:12px; color:#8a97ad;">ผู้ใช้ทั้งหมด</div>
+              <div style="margin-top:9px; font-family:'JetBrains Mono',monospace; font-size:30px; font-weight:500; font-variant-numeric:tabular-nums; color:#e9f1fb;">27</div>
+            </div>
+            <div style="border:1px solid rgba(140,180,255,.12); border-radius:16px; padding:17px 19px; background:rgba(255,255,255,.026);">
+              <div style="font-size:12px; color:#8a97ad;">ออนไลน์ตอนนี้</div>
+              <div style="margin-top:9px; font-family:'JetBrains Mono',monospace; font-size:30px; font-weight:500; font-variant-numeric:tabular-nums; color:#2ce8a4;">6</div>
+            </div>
+            <div style="border:1px solid rgba(140,180,255,.12); border-radius:16px; padding:17px 19px; background:rgba(255,255,255,.026);">
+              <div style="font-size:12px; color:#8a97ad;">คำเชิญค้างรับ</div>
+              <div style="margin-top:9px; font-family:'JetBrains Mono',monospace; font-size:30px; font-weight:500; font-variant-numeric:tabular-nums; color:#ffb020;">3</div>
+            </div>
+            <div style="border:1px solid rgba(140,180,255,.12); border-radius:16px; padding:17px 19px; background:rgba(255,255,255,.026);">
+              <div style="font-size:12px; color:#8a97ad;">ผู้ดูแลระบบ</div>
+              <div style="margin-top:9px; font-family:'JetBrains Mono',monospace; font-size:30px; font-weight:500; font-variant-numeric:tabular-nums; color:#8b6bff;">4</div>
+            </div>
+          </div>
+
+          <!-- Filter / search bar -->
+          <div style="border:1px solid rgba(140,180,255,.12); border-radius:18px; background:rgba(255,255,255,.022); padding:16px 18px; display:flex; flex-wrap:wrap; gap:14px; align-items:center;">
+            <input class="search" style="width:230px;" placeholder="ค้นหาชื่อหรืออีเมล...">
+            <div style="display:flex; gap:7px; flex-wrap:wrap;">
+              <div class="chip" style="padding:8px 14px; border-radius:9px; font-size:12.5px; border:1px solid rgba(0,229,255,.35); background:rgba(0,229,255,.10); color:#00e5ff;">ทั้งหมด</div>
+              <div class="chip" style="padding:8px 14px; border-radius:9px; font-size:12.5px; border:1px solid rgba(140,180,255,.14); background:transparent; color:#8a97ad;">ผู้ดูแลระบบ</div>
+              <div class="chip" style="padding:8px 14px; border-radius:9px; font-size:12.5px; border:1px solid rgba(140,180,255,.14); background:transparent; color:#8a97ad;">ผู้ควบคุม</div>
+              <div class="chip" style="padding:8px 14px; border-radius:9px; font-size:12.5px; border:1px solid rgba(140,180,255,.14); background:transparent; color:#8a97ad;">ผู้ดูอย่างเดียว</div>
+              <div class="chip" style="padding:8px 14px; border-radius:9px; font-size:12.5px; border:1px solid rgba(255,176,32,.28); background:rgba(255,176,32,.08); color:#ffcf7a;">ค้างรับคำเชิญ</div>
+            </div>
+            <div style="margin-left:auto; text-align:right;">
+              <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#6f7c93; letter-spacing:.16em;">SCOPE KEY</div>
+              <div style="margin-top:6px; font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#8b6bff;">เขต · สถานี</div>
+            </div>
+          </div>
+
+          <!-- User table -->
+          <div style="border:1px solid rgba(140,180,255,.12); border-radius:18px; background:rgba(255,255,255,.022); overflow:hidden;">
+            <div style="display:flex; align-items:center; gap:10px; padding:15px 20px; border-bottom:1px solid rgba(140,180,255,.09);">
+              <div style="font-size:14.5px; font-weight:600;">รายชื่อผู้ใช้</div>
+              <div style="margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#6f7c93; letter-spacing:.1em;">27 ACCOUNTS</div>
+            </div>
+            <div style="display:grid; grid-template-columns:1.6fr 1.1fr 1.3fr 1fr 1fr 96px; gap:0; padding:11px 20px; border-bottom:1px solid rgba(140,180,255,.09); font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#6f7c93; letter-spacing:.16em;">
+              <div>USER</div><div>ROLE</div><div>SCOPE</div><div>LAST ACTIVE</div><div>STATUS</div><div style="text-align:right;">ACTIONS</div>
+            </div>
+
+            <!-- Row template x N -->
+            <div class="rowh" style="display:grid; grid-template-columns:1.6fr 1.1fr 1.3fr 1fr 1fr 96px; gap:0; padding:14px 20px; border-bottom:1px solid rgba(140,180,255,.06); align-items:center;">
+              <div style="min-width:0; display:flex; gap:11px; align-items:center;">
+                <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(140deg,#00e5ff,#8b6bff); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#04070d; flex-shrink:0;">ณช</div>
+                <div style="min-width:0;">
+                  <div style="font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">ณัฐชนก ปิยะวงศ์</div>
+                  <div style="margin-top:3px; font-size:11px; color:#6f7c93; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">natchanok.p@mea.or.th</div>
+                </div>
+              </div>
+              <div>
+                <div style="display:inline-flex; padding:5px 10px; border-radius:7px; font-size:11.5px; background:rgba(139,107,255,.14); color:#b6a6ff;">ผู้ดูแลระบบ</div>
+              </div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#9aa7be;">ทุกเขต · ทุกสถานี</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#8a97ad;">2 นาทีที่แล้ว</div>
+              <div><div style="display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:#7de8c4;"><div style="width:6px; height:6px; border-radius:50%; background:#2ce8a4;"></div>ออนไลน์</div></div>
+              <div style="display:flex; gap:6px; justify-content:flex-end;">
+                <div class="icobtn" style="width:26px; height:26px; border-radius:8px; border:1px solid rgba(140,180,255,.14); display:flex; align-items:center; justify-content:center; font-size:11px; color:#8a97ad; cursor:pointer;">✎</div>
+                <div class="icobtn" style="width:26px; height:26px; border-radius:8px; border:1px solid rgba(140,180,255,.14); display:flex; align-items:center; justify-content:center; font-size:11px; color:#8a97ad; cursor:pointer;">⋯</div>
+              </div>
+            </div>
+
+            <div class="rowh" style="display:grid; grid-template-columns:1.6fr 1.1fr 1.3fr 1fr 1fr 96px; gap:0; padding:14px 20px; border-bottom:1px solid rgba(140,180,255,.06); align-items:center;">
+              <div style="min-width:0; display:flex; gap:11px; align-items:center;">
+                <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(140deg,#00e5ff,#8b6bff); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#04070d; flex-shrink:0;">สก</div>
+                <div style="min-width:0;">
+                  <div style="font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">สรวิศ กิตติพงศ์</div>
+                  <div style="margin-top:3px; font-size:11px; color:#6f7c93; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">sorawit.k@mea.or.th</div>
+                </div>
+              </div>
+              <div>
+                <div style="display:inline-flex; padding:5px 10px; border-radius:7px; font-size:11.5px; background:rgba(0,229,255,.12); color:#7fe0ff;">ผู้ควบคุม</div>
+              </div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#9aa7be;">เขตคลองเตย · WTK, BPT</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#8a97ad;">14 นาทีที่แล้ว</div>
+              <div><div style="display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:#7de8c4;"><div style="width:6px; height:6px; border-radius:50%; background:#2ce8a4;"></div>ออนไลน์</div></div>
+              <div style="display:flex; gap:6px; justify-content:flex-end;">
+                <div class="icobtn" style="width:26px; height:26px; border-radius:8px; border:1px solid rgba(140,180,255,.14); display:flex; align-items:center; justify-content:center; font-size:11px; color:#8a97ad; cursor:pointer;">✎</div>
+                <div class="icobtn" style="width:26px; height:26px; border-radius:8px; border:1px solid rgba(140,180,255,.14); display:flex; align-items:center; justify-content:center; font-size:11px; color:#8a97ad; cursor:pointer;">⋯</div>
+              </div>
+            </div>
+
+            <div class="rowh" style="display:grid; grid-template-columns:1.6fr 1.1fr 1.3fr 1fr 1fr 96px; gap:0; padding:14px 20px; border-bottom:1px solid rgba(140,180,255,.06); align-items:center;">
+              <div style="min-width:0; display:flex; gap:11px; align-items:center;">
+                <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(140deg,#00e5ff,#8b6bff); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#04070d; flex-shrink:0;">พร</div>
+                <div style="min-width:0;">
+                  <div style="font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">พรทิพย์ อินทรสุวรรณ</div>
+                  <div style="margin-top:3px; font-size:11px; color:#6f7c93; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">porntip.i@mea.or.th</div>
+                </div>
+              </div>
+              <div>
+                <div style="display:inline-flex; padding:5px 10px; border-radius:7px; font-size:11.5px; background:rgba(140,180,255,.10); color:#a7b3cc;">ผู้ดูอย่างเดียว</div>
+              </div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#9aa7be;">เขตบางพลัด · MMR</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#8a97ad;">3 ชั่วโมงที่แล้ว</div>
+              <div><div style="display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:#8a97ad;"><div style="width:6px; height:6px; border-radius:50%; background:#556277;"></div>ออฟไลน์</div></div>
+              <div style="display:flex; gap:6px; justify-content:flex-end;">
+                <div class="icobtn" style="width:26px; height:26px; border-radius:8px; border:1px solid rgba(140,180,255,.14); display:flex; align-items:center; justify-content:center; font-size:11px; color:#8a97ad; cursor:pointer;">✎</div>
+                <div class="icobtn" style="width:26px; height:26px; border-radius:8px; border:1px solid rgba(140,180,255,.14); display:flex; align-items:center; justify-content:center; font-size:11px; color:#8a97ad; cursor:pointer;">⋯</div>
+              </div>
+            </div>
+
+            <div class="rowh" style="display:grid; grid-template-columns:1.6fr 1.1fr 1.3fr 1fr 1fr 96px; gap:0; padding:14px 20px; border-bottom:1px solid rgba(140,180,255,.06); align-items:center;">
+              <div style="min-width:0; display:flex; gap:11px; align-items:center;">
+                <div style="width:32px; height:32px; border-radius:50%; background:rgba(255,176,32,.16); border:1px dashed rgba(255,176,32,.4); display:flex; align-items:center; justify-content:center; font-size:12px; color:#ffb020; flex-shrink:0;">?</div>
+                <div style="min-width:0;">
+                  <div style="font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#c8d3e6;">apinya.w@mea.or.th</div>
+                  <div style="margin-top:3px; font-size:11px; color:#6f7c93; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">ส่งคำเชิญเมื่อ 2 วันก่อน</div>
+                </div>
+              </div>
+              <div>
+                <div style="display:inline-flex; padding:5px 10px; border-radius:7px; font-size:11.5px; background:rgba(0,229,255,.12); color:#7fe0ff;">ผู้ควบคุม</div>
+              </div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#9aa7be;">เขตดินแดง · ทุกสถานี</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#6f7c93;">—</div>
+              <div><div style="display:inline-flex; padding:4px 9px; border-radius:7px; font-size:10.5px; letter-spacing:.06em; background:rgba(255,176,32,.14); color:#ffcf7a;">รอตอบรับ</div></div>
+              <div style="display:flex; gap:6px; justify-content:flex-end;">
+                <div class="icobtn" style="width:26px; height:26px; border-radius:8px; border:1px solid rgba(140,180,255,.14); display:flex; align-items:center; justify-content:center; font-size:11px; color:#8a97ad; cursor:pointer;">↻</div>
+                <div class="icobtn" style="width:26px; height:26px; border-radius:8px; border:1px solid rgba(140,180,255,.14); display:flex; align-items:center; justify-content:center; font-size:11px; color:#8a97ad; cursor:pointer;">⋯</div>
+              </div>
+            </div>
+
+            <div class="rowh" style="display:grid; grid-template-columns:1.6fr 1.1fr 1.3fr 1fr 1fr 96px; gap:0; padding:14px 20px; align-items:center;">
+              <div style="min-width:0; display:flex; gap:11px; align-items:center;">
+                <div style="width:32px; height:32px; border-radius:50%; background:rgba(255,77,106,.14); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#ff90a5; flex-shrink:0;">วช</div>
+                <div style="min-width:0;">
+                  <div style="font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#8a97ad;">วิชาญ ชูโชค</div>
+                  <div style="margin-top:3px; font-size:11px; color:#6f7c93; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">wichan.c@mea.or.th</div>
+                </div>
+              </div>
+              <div>
+                <div style="display:inline-flex; padding:5px 10px; border-radius:7px; font-size:11.5px; background:rgba(140,180,255,.10); color:#a7b3cc;">ผู้ดูอย่างเดียว</div>
+              </div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#9aa7be;">เขตคลองเตย · WTK</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#6f7c93;">41 วันที่แล้ว</div>
+              <div><div style="display:inline-flex; padding:4px 9px; border-radius:7px; font-size:10.5px; letter-spacing:.06em; background:rgba(255,77,106,.12); color:#ff90a5;">ระงับใช้งาน</div></div>
+              <div style="display:flex; gap:6px; justify-content:flex-end;">
+                <div class="icobtn" style="width:26px; height:26px; border-radius:8px; border:1px solid rgba(140,180,255,.14); display:flex; align-items:center; justify-content:center; font-size:11px; color:#8a97ad; cursor:pointer;">✎</div>
+                <div class="icobtn" style="width:26px; height:26px; border-radius:8px; border:1px solid rgba(140,180,255,.14); display:flex; align-items:center; justify-content:center; font-size:11px; color:#8a97ad; cursor:pointer;">⋯</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Role permission matrix -->
+          <div style="border:1px solid rgba(140,180,255,.12); border-radius:18px; background:rgba(255,255,255,.022); overflow:hidden;">
+            <div style="display:flex; align-items:center; gap:10px; padding:15px 20px; border-bottom:1px solid rgba(140,180,255,.09);">
+              <div style="font-size:14.5px; font-weight:600;">สิทธิ์ตามบทบาท</div>
+              <div style="margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#6f7c93; letter-spacing:.1em;">3 ROLES</div>
+            </div>
+            <div style="display:grid; grid-template-columns:1.4fr repeat(3,1fr); gap:0; padding:11px 20px; border-bottom:1px solid rgba(140,180,255,.09); font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#6f7c93; letter-spacing:.14em;">
+              <div>PERMISSION</div><div style="text-align:center; color:#b6a6ff;">ผู้ดูแลระบบ</div><div style="text-align:center; color:#7fe0ff;">ผู้ควบคุม</div><div style="text-align:center; color:#a7b3cc;">ผู้ดูอย่างเดียว</div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1.4fr repeat(3,1fr); gap:0; padding:13px 20px; border-bottom:1px solid rgba(140,180,255,.06); align-items:center; font-size:13px; color:#c8d3e6;">
+              <div>ดูสถานะอุปกรณ์แบบสด</div>
+              <div style="text-align:center; color:#2ce8a4;">✓</div><div style="text-align:center; color:#2ce8a4;">✓</div><div style="text-align:center; color:#2ce8a4;">✓</div>
+            </div>
+            <div style="display:grid; grid-template-columns:1.4fr repeat(3,1fr); gap:0; padding:13px 20px; border-bottom:1px solid rgba(140,180,255,.06); align-items:center; font-size:13px; color:#c8d3e6;">
+              <div>ทดสอบ / ปรับค่าอุปกรณ์ด้วยมือ</div>
+              <div style="text-align:center; color:#2ce8a4;">✓</div><div style="text-align:center; color:#2ce8a4;">✓</div><div style="text-align:center; color:#556277;">–</div>
+            </div>
+            <div style="display:grid; grid-template-columns:1.4fr repeat(3,1fr); gap:0; padding:13px 20px; border-bottom:1px solid rgba(140,180,255,.06); align-items:center; font-size:13px; color:#c8d3e6;">
+              <div>เพิ่ม / แก้ไข / ลบอุปกรณ์</div>
+              <div style="text-align:center; color:#2ce8a4;">✓</div><div style="text-align:center; color:#2ce8a4;">✓</div><div style="text-align:center; color:#556277;">–</div>
+            </div>
+            <div style="display:grid; grid-template-columns:1.4fr repeat(3,1fr); gap:0; padding:13px 20px; border-bottom:1px solid rgba(140,180,255,.06); align-items:center; font-size:13px; color:#c8d3e6;">
+              <div>รับทราบการแจ้งเตือน</div>
+              <div style="text-align:center; color:#2ce8a4;">✓</div><div style="text-align:center; color:#2ce8a4;">✓</div><div style="text-align:center; color:#556277;">–</div>
+            </div>
+            <div style="display:grid; grid-template-columns:1.4fr repeat(3,1fr); gap:0; padding:13px 20px; align-items:center; font-size:13px; color:#c8d3e6;">
+              <div>จัดการผู้ใช้และสิทธิ์</div>
+              <div style="text-align:center; color:#2ce8a4;">✓</div><div style="text-align:center; color:#556277;">–</div><div style="text-align:center; color:#556277;">–</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
