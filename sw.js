@@ -1,8 +1,8 @@
 /* SubEye service worker
    กฎสำคัญ: บัมพ์ CACHE_VERSION ทุกครั้งที่แก้ index.html
    หน้าเว็บใช้ network-first จึงได้ของใหม่ทันทีที่ออนไลน์ แคชเป็นแค่ตัวสำรองตอนออฟไลน์ */
-const CACHE_VERSION = 'subeye-v2.0.7';
-const SHELL = ['./', './index.html', './manifest.json'];
+const CACHE_VERSION = 'subeye-v2.1.1';
+const SHELL = ['./', './index.html', './manifest.json', './icon.svg', './icon-maskable.svg'];
 
 self.addEventListener('install', e => {
   self.skipWaiting();
