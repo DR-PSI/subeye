@@ -1,0 +1,40 @@
+{
+  "name": "SubEye · Substation IoT Monitor",
+  "short_name": "SubEye",
+  "description": "ตรวจสอบอุปกรณ์ในสถานีไฟฟ้า 24 hr. ด้วยการตรวจวัดอุณหภูมิ ความชื้น และควันไฟจากทุกสถานี พร้อมแจ้งเตือนผ่าน LINE",
+  "lang": "th",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#04070d",
+  "theme_color": "#04070d",
+  "categories": ["utilities", "productivity"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Device Health",
+      "short_name": "Health",
+      "url": "./index.html#health"
+    },
+    {
+      "name": "แจ้งเตือน",
+      "short_name": "Alarms",
+      "url": "./index.html#alarms"
+    }
+  ]
+}

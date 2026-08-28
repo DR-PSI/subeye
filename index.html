@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#04070d">
+<title>SubEye · Substation IoT Monitor</title>
+<template id="__bundler_thumbnail" data-bg-color="#04070d">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#04070d"/>
+    <circle cx="600" cy="400" r="180" fill="none" stroke="#00e5ff" stroke-width="14"/>
+    <circle cx="600" cy="400" r="62" fill="#8b6bff"/>
+    <text x="600" y="660" text-anchor="middle" fill="#e9f1fb" font-family="monospace" font-size="72" letter-spacing="18">SUBEYE</text>
+  </svg>
+</template>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SubEye">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#04070d; --panel:rgba(255,255,255,.024); --panel2:rgba(255,255,255,.04);
+  --line:rgba(140,180,255,.12); --line2:rgba(140,180,255,.07);
+  --txt:#e9f1fb; --dim:#9aa7be; --dim2:#6f7c93; --dim3:#4f5b70;
+  --cy:#00e5ff; --vi:#8b6bff; --ok:#2ce8a4; --warn:#ffb020; --alarm:#ff4d6a;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);font-family:'IBM Plex Sans Thai',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{min-height:100vh;background:
+  radial-gradient(1100px 520px at 78% -12%, rgba(139,107,255,.16), transparent 70%),
+  radial-gradient(900px 460px at 8% -8%, rgba(0,229,255,.14), transparent 70%),
+  var(--bg);}
+a{color:var(--cy);text-decoration:none}
+a:hover{color:var(--vi)}
+button,input,select{font-family:inherit;color:inherit}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:rgba(140,180,255,.16);border-radius:8px}
+::-webkit-scrollbar-track{background:transparent}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+@keyframes blip{0%{opacity:.25;transform:scale(.7)}50%{opacity:1;transform:scale(1)}100%{opacity:.25;transform:scale(.7)}}
+
+/* ---------- auth gate ---------- */
+#gate{position:fixed;inset:0;z-index:100;display:grid;grid-template-columns:1.15fr .85fr;background:var(--bg)}
+#gate .left{position:relative;padding:56px;display:flex;flex-direction:column;justify-content:space-between;border-right:1px solid rgba(140,180,255,.1)}
+#gate .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.3em;color:var(--cy);margin-bottom:20px}
+#gate h1{font-size:clamp(34px,4.4vw,60px);line-height:1.05;font-weight:600;letter-spacing:-.02em;margin:0}
+#gate .lede{margin-top:20px;font-size:16px;line-height:1.7;color:var(--dim);max-width:520px;text-wrap:pretty}
+#gate .stats{margin-top:34px;display:flex;gap:34px;flex-wrap:wrap}
+#gate .stats b{display:block;font-family:var(--mono);font-size:28px;font-weight:500}
+#gate .stats span{font-size:12px;color:var(--dim2);letter-spacing:.1em;text-transform:uppercase}
+#gate .right{display:flex;align-items:center;justify-content:center;padding:40px}
+.card-auth{width:100%;max-width:400px;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:38px 32px;backdrop-filter:blur(18px)}
+.brand-row{display:flex;align-items:center;gap:13px}
+.brand-mark{width:40px;height:40px;border-radius:11px;background:linear-gradient(140deg,var(--cy),var(--vi));display:flex;align-items:center;justify-content:center;color:#04070d;font-weight:700;font-size:15px}
+.gbtn{margin-top:26px;width:100%;height:52px;border:none;border-radius:12px;background:#e9f1fb;color:#08111d;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:11px}
+.gbtn:hover{background:#fff}
+.gbtn img{width:18px;height:18px}
+#authError{margin-top:14px;color:var(--alarm);font-size:12.5px;display:none}
+@media(max-width:900px){#gate{grid-template-columns:1fr}#gate .left{display:none}}
+
+/* ---------- shell ---------- */
+#app{display:none;grid-template-columns:236px 1fr;min-height:100vh}
+#app.on{display:grid}
+.side{border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:22px;background:rgba(255,255,255,.014)}
+.side .logo{display:flex;align-items:center;gap:11px;padding:0 6px}
+.side .logo b{display:block;font-size:15px;font-weight:600}
+.side .logo span{font-family:var(--mono);font-size:9.5px;color:var(--dim2);letter-spacing:.18em}
+.navlist{display:flex;flex-direction:column;gap:3px}
+.navcap{font-family:var(--mono);font-size:9.5px;color:#556277;letter-spacing:.2em;padding:0 8px 6px}
+.navitem{display:flex;align-items:center;gap:11px;padding:10px;border-radius:10px;cursor:pointer;font-size:14px;color:var(--dim);border:1px solid transparent;background:none;width:100%;text-align:left}
+.navitem:hover{background:rgba(140,180,255,.06)}
+.navitem .code{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(140,180,255,.07);color:#7e8ba3;font-family:var(--mono);font-size:10.5px;font-weight:700;flex:none}
+.navitem .lbl{flex:1}
+.navitem .dot{width:5px;height:5px;border-radius:50%;background:transparent;flex:none}
+.navitem.active{color:var(--txt)}
+.navitem.active .code{background:rgba(0,229,255,.14);color:var(--cy)}
+.navitem.active .dot{background:var(--cy)}
+.navitem .cnt{font-family:var(--mono);font-size:10px;color:var(--alarm)}
+.side .foot{margin-top:auto;display:flex;flex-direction:column;gap:10px}
+.simbox{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--panel2)}
+.simrow{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--dim)}
+.sw{width:38px;height:21px;border-radius:11px;background:rgba(140,180,255,.16);position:relative;cursor:pointer;transition:background .18s;flex:none}
+.sw i{position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:#e9f1fb;transition:left .18s}
+.sw.on{background:rgba(0,229,255,.45)}
+.sw.on i{left:19px}
+.simnote{margin-top:8px;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--dim2)}
+.userrow{display:flex;align-items:center;gap:10px;padding:8px 6px}
+.userrow img{width:28px;height:28px;border-radius:50%;flex:none;background:linear-gradient(140deg,rgba(0,229,255,.5),rgba(139,107,255,.5))}
+.userrow .nm{flex:1;min-width:0;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.userrow .sub{font-size:10.5px;color:var(--dim2)}
+.outbtn{background:none;border:none;font-family:var(--mono);font-size:9.5px;color:var(--dim2);cursor:pointer;letter-spacing:.1em}
+.outbtn:hover{color:var(--alarm)}
+
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:14px;padding:14px 24px;border-bottom:1px solid var(--line);background:rgba(4,7,13,.66);backdrop-filter:blur(14px);position:sticky;top:0;z-index:20;flex-wrap:wrap}
+.topbar h2{margin:0;font-size:18px;font-weight:600;letter-spacing:-.01em}
+.topbar .sub{font-size:12px;color:#7e8ba3}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.chip{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);font-size:12.5px;color:var(--dim)}
+.chip .live{width:6px;height:6px;border-radius:50%;background:var(--ok);animation:blip 2.2s infinite}
+.chip.alarmish{border-color:rgba(255,77,106,.28);background:rgba(255,77,106,.09);color:#ff90a5;cursor:pointer}
+.chip.alarmish:hover{background:rgba(255,77,106,.16)}
+.btn-primary{height:34px;padding:0 16px;border:none;border-radius:9px;background:linear-gradient(120deg,var(--cy),#5cc8ff);color:#04121a;font-size:12.5px;font-weight:600;cursor:pointer}
+.btn-primary:hover{filter:brightness(1.08)}
+.body{padding:22px 24px 60px;min-width:0}
+.view{display:none}
+.view.on{display:block}
+
+/* ---------- shared blocks ---------- */
+.panel{border:1px solid var(--line);border-radius:18px;background:var(--panel);overflow:hidden}
+.panel .ph{display:flex;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid var(--line2)}
+.panel .ph h3{margin:0;font-size:14.5px;font-weight:600}
+.panel .pb{padding:16px 18px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:13px}
+.kpi{border:1px solid var(--line);border-radius:16px;padding:17px 19px;background:var(--panel2);position:relative;overflow:hidden}
+.kpi .bar{position:absolute;inset:0 auto 0 0;width:2px}
+.kpi .lb{font-size:12px;color:#8a97ad}
+.kpi .vl{margin-top:9px;display:flex;align-items:baseline;gap:6px}
+.kpi .vl b{font-family:var(--mono);font-size:31px;font-weight:500;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.kpi .vl span{font-family:var(--mono);font-size:12px;color:var(--dim2)}
+.kpi .nt{margin-top:7px;font-size:11.5px;color:var(--dim2)}
+.pill{padding:7px 13px;border-radius:8px;font-size:12px;cursor:pointer;border:1px solid var(--line);background:transparent;color:#8a97ad}
+.pill.on{border-color:rgba(0,229,255,.4);background:rgba(0,229,255,.12);color:var(--txt)}
+.pill.vi.on{border-color:rgba(139,107,255,.4);background:rgba(139,107,255,.14)}
+.pills{display:flex;gap:7px;flex-wrap:wrap}
+.caplbl{font-family:var(--mono);font-size:9.5px;color:var(--dim2);letter-spacing:.18em;margin-bottom:7px}
+.two{display:grid;grid-template-columns:1.6fr 1fr;gap:15px;align-items:start;margin-top:16px}
+.detail-two{display:grid;grid-template-columns:1fr 320px;gap:15px;align-items:start}
+@media(max-width:1100px){.two,.detail-two{grid-template-columns:1fr}}
+.rowline{display:flex;align-items:center;gap:11px}
+.rowline .nm{font-size:13px;color:#c8d3e6}
+.rowline .fill{flex:1;height:1px;background:rgba(140,180,255,.1)}
+.rowline .vl{font-family:var(--mono);font-size:10.5px;color:#7e8ba3;letter-spacing:.08em}
+.stack>*+*{border-top:1px solid var(--line2)}
+.sdot{width:7px;height:7px;border-radius:50%;flex:none}
+
+/* device cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(288px,1fr));gap:14px}
+.dcard{border:1px solid var(--line);border-radius:16px;background:var(--panel2);padding:15px 17px 13px;position:relative;overflow:hidden}
+.dcard.warn{border-color:rgba(255,176,32,.3)}
+.dcard.alarm{border-color:rgba(255,77,106,.36)}
+.dcard .top{display:flex;align-items:flex-start;gap:10px}
+.dcard .nm{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dcard .meta{margin-top:4px;font-family:var(--mono);font-size:10.5px;color:var(--dim2);letter-spacing:.06em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.iconbtn{width:26px;height:26px;border-radius:8px;border:1px solid rgba(140,180,255,.14);background:none;color:#8a97ad;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;flex:none}
+.iconbtn:hover{color:var(--cy);border-color:rgba(0,229,255,.4)}
+.iconbtn.danger:hover{color:var(--alarm);border-color:rgba(255,77,106,.4)}
+.dcard .valrow{margin-top:13px;display:flex;align-items:flex-end;gap:9px}
+.dcard .valrow b{font-family:var(--mono);font-size:31px;font-weight:500;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.dcard .valrow .u{font-family:var(--mono);font-size:12px;color:var(--dim2);padding-bottom:3px}
+.badge{margin-left:auto;padding:4px 9px;border-radius:7px;font-size:10.5px;letter-spacing:.04em}
+.spark{margin-top:12px;height:34px}
+.spark svg{width:100%;height:100%;display:block;overflow:visible}
+.ctl{margin-top:11px;padding-top:11px;border-top:1px solid rgba(140,180,255,.08);display:flex;align-items:center;gap:9px}
+.stepbtn{width:30px;height:30px;border-radius:9px;border:1px solid rgba(140,180,255,.14);background:none;font-family:var(--mono);font-size:14px;color:#c8d3e6;cursor:pointer;flex:none}
+.stepbtn:hover{background:rgba(140,180,255,.08)}
+input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:4px;border-radius:3px;background:rgba(140,180,255,.16);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#e9f1fb;border:2px solid var(--bg);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#e9f1fb;border:2px solid var(--bg);cursor:pointer}
+.togrow{margin-top:14px;display:flex;align-items:center;justify-content:space-between}
+.togrow .st{font-family:var(--mono);font-size:15px}
+.hint{font-size:11px;color:var(--dim2);margin-top:9px}
+.empty{grid-column:1/-1;border:1px dashed var(--line);border-radius:16px;padding:44px;text-align:center;color:var(--dim2);font-size:13.5px}
+.empty b{display:block;font-size:15px;color:var(--txt);margin-bottom:8px;font-weight:600}
+
+/* tables */
+.trow{display:grid;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid rgba(140,180,255,.06)}
+.trow:hover{background:rgba(140,180,255,.04)}
+.thead{font-family:var(--mono);font-size:9.5px;color:var(--dim2);letter-spacing:.18em;padding:11px 18px;border-bottom:1px solid var(--line2)}
+.alarm-grid{grid-template-columns:96px 1fr 150px 92px 128px}
+.health-grid{grid-template-columns:58px 1fr 190px 150px 92px}
+@media(max-width:1000px){.alarm-grid,.health-grid{grid-template-columns:1fr}.thead{display:none}}
+.trow .dv{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trow .ms{margin-top:3px;font-size:11px;color:var(--dim2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag{padding:4px 8px;border-radius:6px;font-family:var(--mono);font-size:10px;letter-spacing:.04em}
+.ackbtn{padding:6px 11px;border-radius:8px;font-size:11.5px;cursor:pointer;border:1px solid rgba(0,229,255,.32);background:rgba(0,229,255,.1);color:#8ceaff}
+.ackbtn[disabled]{border-color:var(--line);background:none;color:var(--dim2);cursor:default}
+.scorecell{display:flex;flex-direction:column;align-items:center;gap:5px}
+.scorecell b{font-family:var(--mono);font-size:21px;font-weight:700;font-variant-numeric:tabular-nums}
+.mini{width:100%;height:3px;border-radius:2px;background:rgba(140,180,255,.12);overflow:hidden}
+.mini i{display:block;height:100%}
+
+/* detail */
+.dh{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.crumb{background:none;border:none;font-family:var(--mono);font-size:10.5px;color:var(--dim2);letter-spacing:.14em;cursor:pointer;padding:0}
+.crumb:hover{color:var(--cy)}
+.bigval{display:flex;align-items:baseline;gap:8px;justify-content:flex-end}
+.bigval b{font-family:var(--mono);font-size:50px;font-weight:500;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.bigval span{font-family:var(--mono);font-size:15px;color:var(--dim2)}
+.legend{margin-top:18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;font-family:var(--mono);font-size:10px;color:#8a97ad;letter-spacing:.08em}
+.legend .sw-band{width:16px;height:8px;border-radius:2px;background:rgba(139,107,255,.35);border:1px solid rgba(139,107,255,.6)}
+.legend .sw-warn{width:16px;border-top:1px dashed var(--warn)}
+.legend .sw-alarm{width:16px;border-top:1px dashed var(--alarm)}
+.legend i{display:inline-block;vertical-align:middle;margin-right:7px}
+.chart{margin-top:14px;height:260px}
+.chart svg{width:100%;height:100%;display:block;overflow:visible}
+.ticks{display:flex;justify-content:space-between;margin-top:9px;font-family:var(--mono);font-size:10px;color:#5b6880}
+.blbox{border:1px solid rgba(139,107,255,.24);border-radius:18px;background:rgba(139,107,255,.06);padding:17px 19px}
+.kv{display:flex;justify-content:space-between;font-size:12.5px;color:var(--dim);gap:12px}
+.kv b{font-family:var(--mono);font-weight:400;color:#c8d3e6}
+.btn-vi{flex:1;height:40px;border-radius:11px;border:1px solid rgba(139,107,255,.4);background:rgba(139,107,255,.14);color:#cbc0ff;font-size:12.5px;cursor:pointer}
+.btn-vi:hover{background:rgba(139,107,255,.24)}
+.btn-ghost{flex:1;height:40px;border-radius:11px;border:1px solid rgba(140,180,255,.16);background:none;color:#c8d3e6;font-size:12.5px;cursor:pointer;line-height:1.2}
+.btn-ghost:hover{background:rgba(140,180,255,.07)}
+
+/* modal */
+.overlay{position:fixed;inset:0;background:rgba(2,4,8,.72);backdrop-filter:blur(6px);z-index:60;display:none;align-items:center;justify-content:center;padding:20px}
+.overlay.show{display:flex}
+.modal{width:min(520px,100%);max-height:calc(100vh - 48px);overflow:auto;border:1px solid rgba(140,180,255,.16);border-radius:20px;background:#0a1020;box-shadow:0 40px 100px rgba(0,0,0,.6);padding:24px 26px}
+.modal h3{margin:8px 0 0;font-size:21px;font-weight:600;letter-spacing:-.01em}
+.tplgrid{margin-top:10px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.tplitem{padding:11px 13px;border-radius:11px;cursor:pointer;border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--dim)}
+.tplitem.on{border-color:rgba(0,229,255,.4);background:rgba(0,229,255,.1);color:var(--txt)}
+.tplitem b{display:block;font-size:13px;font-weight:400}
+.tplitem span{display:block;margin-top:4px;font-family:var(--mono);font-size:10px;color:var(--dim2);letter-spacing:.06em}
+.field{margin-top:16px}
+.field input{margin-top:9px;width:100%;height:44px;padding:0 13px;border-radius:11px;border:1px solid rgba(140,180,255,.16);background:rgba(255,255,255,.03);font-family:var(--mono);font-size:13px;outline:none}
+.field input:focus{border-color:rgba(0,229,255,.4)}
+.summary{margin-top:16px;padding:13px 15px;border-radius:12px;border:1px solid rgba(140,180,255,.1);background:rgba(140,180,255,.04)}
+.macts{margin-top:20px;display:flex;gap:10px}
+.macts .cancel{flex:1;height:46px;border-radius:12px;border:1px solid rgba(140,180,255,.14);background:none;color:#c8d3e6;font-size:13.5px;cursor:pointer}
+.macts .confirm{flex:1.4;height:46px;border-radius:12px;border:none;background:linear-gradient(120deg,var(--cy),#5cc8ff);color:#04121a;font-size:13.5px;font-weight:600;cursor:pointer}
+.macts .confirm[disabled]{opacity:.4;cursor:default}
+
+/* mobile */
+@media(max-width:860px){
+  #app.on{grid-template-columns:1fr}
+  .side{flex-direction:row;align-items:center;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line);padding:10px 12px;gap:12px;position:sticky;top:0;z-index:30;background:rgba(4,7,13,.9);backdrop-filter:blur(14px)}
+  .side .logo{flex:none}
+  .side .logo>div{display:none}
+  .navlist{flex-direction:row;gap:6px}
+  .navcap{display:none}
+  .navitem{padding:8px 10px;white-space:nowrap;min-height:44px}
+  .navitem .lbl{font-size:13px}
+  .side .foot{margin-top:0;flex-direction:row;align-items:center;gap:8px;flex:none}
+  .simbox{display:none}
+  .userrow{padding:0}
+  .userrow .nm,.userrow .sub{display:none}
+  .body{padding:16px 14px 60px}
+  .topbar{padding:12px 14px}
+  .bigval b{font-size:38px}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ auth ============ -->
+<div id="gate">
+  <div class="left">
+    <div class="brand-row"><div class="brand-mark">SE</div><div class="mono" style="font-size:12px;letter-spacing:.32em;color:#7e8ba3">SUBEYE</div></div>
+    <div>
+      <div class="kicker">SUBSTATION IOT MONITOR · BY Dr. JUPETOR</div>
+      <h1>ตรวจสอบอุปกรณ์ในสถานีไฟฟ้า<br>24 hr.</h1>
+      <div class="lede">ด้วยการตรวจวัดอุณหภูมิ ความชื้น และควันไฟจากทุกสถานี พร้อมแจ้งเตือนผ่าน LINE ทันทีเมื่อผิดปกติ โดยอ้างอิงค่าฐาน (Baseline) และ ML เฉพาะของอุปกรณ์แต่ละตัว</div>
+      <div class="stats">
+        <div><b id="gateSites">18</b><span>เขต</span></div>
+        <div><b id="gateSubs">3</b><span>สถานีต่อเขต</span></div>
+        <div><b style="color:var(--ok)">LINE</b><span>แจ้งเตือนทันที</span></div>
+      </div>
+    </div>
+    <div class="mono" style="font-size:11px;color:var(--dim3);letter-spacing:.14em">FIREBASE · N8N · LINE MESSAGING API</div>
+  </div>
+  <div class="right">
+    <div class="card-auth">
+      <div class="brand-row"><div class="brand-mark">SE</div><div><b style="font-size:15px">SubEye</b><div class="mono" style="font-size:9.5px;color:var(--dim2);letter-spacing:.18em">CONTROL ROOM</div></div></div>
+      <div style="margin-top:24px;font-size:23px;font-weight:600;letter-spacing:-.01em">เข้าสู่ระบบ</div>
+      <div style="margin-top:8px;font-size:14px;color:#7e8ba3">ใช้บัญชี Google ขององค์กรเพื่อดูและแก้ไขข้อมูลอุปกรณ์</div>
+      <button class="gbtn" id="googleSignInBtn">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">
+        ดำเนินการต่อด้วย Google
+      </button>
+      <div id="authError">เข้าสู่ระบบไม่สำเร็จ ลองใหม่อีกครั้ง</div>
+      <div style="margin-top:18px;font-size:12.5px;line-height:1.7;color:var(--dim2)">การเข้าถึงจำกัดเฉพาะผู้ใช้ที่ได้รับอนุญาต ระบบบันทึกการแก้ไขข้อมูลอุปกรณ์ทุกครั้ง</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ app ============ -->
+<div id="app">
+  <aside class="side">
+    <div class="logo">
+      <div class="brand-mark">SE</div>
+      <div><b>SubEye</b><span>V2 · CONTROL</span></div>
+    </div>
+    <nav class="navlist">
+      <div class="navcap">MONITOR</div>
+      <button class="navitem active" data-view="dash"><span class="code">DB</span><span class="lbl">ภาพรวม</span><span class="dot"></span></button>
+      <button class="navitem" data-view="devices"><span class="code">ST</span><span class="lbl">สถานี / อุปกรณ์</span><span class="dot"></span></button>
+      <button class="navitem" data-view="detail"><span class="code">TR</span><span class="lbl">รายละเอียดอุปกรณ์</span><span class="dot"></span></button>
+      <button class="navitem" data-view="health"><span class="code">ML</span><span class="lbl">Device Health</span><span class="dot"></span></button>
+      <button class="navitem" data-view="alarms"><span class="code">AL</span><span class="lbl">แจ้งเตือน</span><span class="cnt" id="navAlarmCount"></span><span class="dot"></span></button>
+    </nav>
+    <div class="foot">
+      <div class="simbox">
+        <div class="simrow"><span>Auto-simulate</span><div class="sw on" id="simSwitch"><i></i></div></div>
+        <div class="simnote" id="simNote">DRIFT ±0.7 / 3S</div>
+      </div>
+      <div class="userrow">
+        <img id="userPhoto" alt="">
+        <div class="nm"><span id="userName"></span><div class="sub">MEA · Operations</div></div>
+        <button class="outbtn" id="signOutBtn">OUT</button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div style="min-width:0">
+        <h2 id="pageTitle">ภาพรวม</h2>
+        <div class="sub" id="pageSub">—</div>
+      </div>
+      <div class="tb-right">
+        <div class="chip"><span class="live"></span><span class="mono" id="clock" style="font-size:11px;letter-spacing:.1em">--:--:--</span></div>
+        <div class="chip alarmish" id="unackChip"><span style="width:6px;height:6px;border-radius:50%;background:var(--alarm)"></span><span id="unackText">ค้างรับทราบ 0</span></div>
+        <button class="btn-primary" id="openAdd">+ เพิ่มอุปกรณ์</button>
+      </div>
+    </div>
+
+    <div class="body">
+      <!-- dashboard -->
+      <section class="view on" id="view-dash">
+        <div class="kpis" id="dashKpis"></div>
+        <div class="two">
+          <div class="panel">
+            <div class="ph"><h3>อุปกรณ์ในขอบเขตที่เลือก</h3><span class="mono" id="dashScope" style="font-size:10px;color:var(--dim2);letter-spacing:.14em;margin-left:auto"></span></div>
+            <div id="dashList" class="stack"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:15px">
+            <div class="panel"><div class="ph"><h3>สถานะเส้นทางข้อมูล</h3></div>
+              <div class="pb" id="pipeline" style="display:flex;flex-direction:column;gap:11px"></div>
+            </div>
+            <div class="panel"><div class="ph"><h3>แจ้งเตือนล่าสุด</h3></div>
+              <div class="pb" id="dashAlarms" style="padding-top:4px"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- devices -->
+      <section class="view" id="view-devices">
+        <div class="panel" style="margin-bottom:16px"><div class="pb" style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end">
+          <div class="pills" style="background:rgba(140,180,255,.07);border-radius:11px;padding:3px;gap:0">
+            <button class="pill on" id="tabSubstation" style="border:none;background:rgba(0,229,255,.14);color:var(--txt);padding:9px 18px;border-radius:9px;font-size:13px">สถานีไฟฟ้า</button>
+            <button class="pill" id="tabDistrict" style="border:none;background:none;padding:9px 18px;border-radius:9px;font-size:13px">การไฟฟ้าเขต</button>
+          </div>
+          <div>
+            <div class="caplbl">การไฟฟ้าเขต</div>
+            <select id="stationSelect" class="pill" style="cursor:pointer;padding:9px 12px;color:var(--txt);background:rgba(255,255,255,.03)"></select>
+          </div>
+          <div id="substationWrap">
+            <div class="caplbl">สถานีไฟฟ้า</div>
+            <div class="pills" id="substationPills"></div>
+          </div>
+          <div style="margin-left:auto;text-align:right">
+            <div class="caplbl" style="margin-bottom:5px">FIRESTORE KEY</div>
+            <div class="mono" id="scopeKey" style="font-size:11.5px;color:var(--vi)"></div>
+          </div>
+        </div></div>
+        <div class="grid" id="deviceGrid"></div>
+      </section>
+
+      <!-- detail -->
+      <section class="view" id="view-detail">
+        <div class="detail-two">
+          <div style="display:flex;flex-direction:column;gap:15px">
+            <div class="panel"><div class="pb" style="padding:20px 22px">
+              <div class="dh">
+                <div>
+                  <button class="crumb" id="detailBack">‹ กลับไปที่รายการอุปกรณ์</button>
+                  <div id="detailName" style="margin-top:9px;font-size:23px;font-weight:600;letter-spacing:-.01em"></div>
+                  <div class="mono" id="detailMeta" style="margin-top:6px;font-size:11px;color:#7e8ba3;letter-spacing:.06em"></div>
+                </div>
+                <div style="margin-left:auto;text-align:right">
+                  <div class="bigval"><b id="detailVal">—</b><span id="detailUnit"></span></div>
+                  <div id="detailBadge" class="badge" style="display:inline-block;margin-top:9px"></div>
+                </div>
+              </div>
+              <div class="legend">
+                <span><i class="sw-band"></i><span id="bandTxt">BASELINE ±2σ</span></span>
+                <span><i class="sw-warn"></i>WARN</span>
+                <span><i class="sw-alarm"></i>ALARM</span>
+                <span style="margin-left:auto;display:flex;align-items:center;gap:9px;padding:5px 11px;border-radius:8px" id="healthChip">HEALTH <b id="healthVal" style="font-size:15px"></b></span>
+              </div>
+              <div class="chart" id="detailChart"></div>
+              <div class="ticks" id="detailTicks"></div>
+            </div></div>
+            <div class="kpis" id="detailStats"></div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:15px">
+            <div class="blbox">
+              <div style="display:flex;align-items:center;gap:10px">
+                <h3 style="margin:0;font-size:14.5px;font-weight:600">Baseline ที่ระบบเรียนรู้</h3>
+                <span class="badge" id="blState" style="margin-left:auto"></span>
+              </div>
+              <div style="margin-top:14px;display:flex;align-items:baseline;gap:8px">
+                <span class="mono" id="blMean" style="font-size:29px;font-weight:500;letter-spacing:-.02em">—</span>
+                <span class="mono" id="blSd" style="font-size:13px;color:#a99cff"></span>
+              </div>
+              <div style="margin-top:14px;display:flex;flex-direction:column;gap:9px" id="blRows"></div>
+              <div style="margin-top:15px;display:flex;gap:9px">
+                <button class="btn-vi" id="blApprove">อนุมัติเป็นค่าปกติ</button>
+                <button class="btn-ghost" id="blSnap">ตั้งค่าปัจจุบันเป็นปกติ</button>
+              </div>
+              <div class="hint" id="blHint"></div>
+            </div>
+
+            <div class="panel" id="srvMlBox" style="display:none;border-color:rgba(0,229,255,.24);background:rgba(0,229,255,.045)"><div class="pb">
+              <div style="display:flex;align-items:center;gap:10px">
+                <h3 style="margin:0;font-size:14.5px;font-weight:600">โมเดลฝั่งเสิร์ฟเวอร์</h3>
+                <span class="badge" id="srvMlUsed" style="margin-left:auto"></span>
+              </div>
+              <div style="margin-top:14px;display:flex;flex-direction:column;gap:9px" id="srvMlRows"></div>
+              <div id="srvMlChartWrap" style="display:none;margin-top:14px;padding-top:13px;border-top:1px solid var(--line2)">
+                <div style="height:46px" id="srvMlChart"></div>
+                <div class="mono hint" id="srvMlChartCap" style="letter-spacing:.06em"></div>
+              </div>
+            </div></div>
+
+            <div class="panel"><div class="pb">
+              <h3 style="margin:0;font-size:14.5px;font-weight:600">ทดสอบค่าด้วยมือ</h3>
+              <div class="hint" style="margin-top:6px;line-height:1.6">ปรับค่าให้ข้ามเกณฑ์เพื่อทดสอบการส่งแจ้งเตือนเข้า LINE — ค่าถูกบันทึกลง Firestore จริง</div>
+              <div class="ctl" style="border-top:none;padding-top:14px" id="detailCtl"></div>
+              <div style="margin-top:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px" class="mono" id="detailThresholds" style="font-size:10.5px"></div>
+              <button class="btn-ghost" id="testLine" style="margin-top:16px;width:100%;height:44px;border-color:rgba(0,229,255,.3);background:rgba(0,229,255,.08);color:#8ceaff">ทดสอบส่งเข้ากลุ่ม LINE</button>
+              <div class="mono hint" id="pushNote" style="letter-spacing:.1em">READY</div>
+            </div></div>
+
+            <div class="panel"><div class="pb">
+              <h3 style="margin:0;font-size:14.5px;font-weight:600">เหตุการณ์ของอุปกรณ์นี้</h3>
+              <div id="detailEvents" style="margin-top:6px"></div>
+            </div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- health -->
+      <section class="view" id="view-health">
+        <div class="detail-two">
+          <div style="display:flex;flex-direction:column;gap:15px">
+            <div class="kpis" id="healthKpis"></div>
+            <div class="panel">
+              <div class="ph">
+                <h3>จัดอันดับความเสี่ยง</h3>
+                <span class="mono" style="font-size:9.5px;color:var(--dim2);letter-spacing:.14em">BASELINE Z-SCORE + TREND + FRESHNESS</span>
+                <div class="pills" id="healthFilters" style="margin-left:auto"></div>
+              </div>
+              <div id="healthRows"></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:15px">
+            <div class="panel"><div class="pb">
+              <h3 style="margin:0;font-size:14.5px;font-weight:600">Baseline ที่รออนุมัติ</h3>
+              <div class="hint" style="margin-top:6px;line-height:1.6">ระบบเรียนค่าปกติจากช่วงที่สถานะปกติเอง แต่ต้องมีคนยืนยันก่อนใช้ตัดสินความผิดปกติ</div>
+              <div id="pendingList" style="margin-top:10px"></div>
+            </div></div>
+            <div class="panel"><div class="pb">
+              <h3 style="margin:0;font-size:14.5px;font-weight:600">คุณภาพข้อมูลที่ป้อนโมเดล</h3>
+              <div id="dataQuality" style="margin-top:14px;display:flex;flex-direction:column;gap:11px"></div>
+            </div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- alarms -->
+      <section class="view" id="view-alarms">
+        <div class="kpis" id="alarmKpis"></div>
+        <div class="panel" style="margin-top:16px">
+          <div class="ph"><h3>ประวัติแจ้งเตือน</h3><div class="pills" id="alarmFilters" style="margin-left:auto"></div></div>
+          <div class="thead trow alarm-grid" style="padding-bottom:11px"><div>TIME</div><div>DEVICE / MESSAGE</div><div>SCOPE</div><div>VALUE</div><div>ACK</div></div>
+          <div id="alarmRows"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- ============ modal ============ -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div style="display:flex;align-items:flex-start">
+      <div>
+        <div class="mono" id="modalKicker" style="font-size:9.5px;color:var(--dim2);letter-spacing:.2em">NEW DEVICE</div>
+        <h3 id="modalTitle">เพิ่มอุปกรณ์ใหม่</h3>
+      </div>
+      <button class="iconbtn danger" id="closeModal" style="margin-left:auto;width:30px;height:30px">✕</button>
+    </div>
+    <div style="margin-top:20px">
+      <div class="caplbl">TEMPLATE</div>
+      <div class="tplgrid" id="tplList"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="field"><div class="caplbl">MEA NO.</div><input type="text" id="deviceLabel" placeholder="เช่น 4130-0021"></div>
+      <div class="field"><div class="caplbl">STATION ID / จุดติดตั้ง</div><input type="text" id="deviceLoc" placeholder="เช่น Transformer Bay"></div>
+    </div>
+    <div class="summary">
+      <div class="kv"><span>บันทึกลง</span><b id="modalScope" style="color:var(--vi)"></b></div>
+      <div class="kv" style="margin-top:9px"><span>เกณฑ์แจ้งเตือน</span><b id="modalThresholds"></b></div>
+    </div>
+    <div class="macts">
+      <button class="cancel" id="cancelAdd">ยกเลิก</button>
+      <button class="confirm" id="confirmAdd" disabled>เพิ่มอุปกรณ์</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCAjbkL1gPACvPrxNwxTKpk72UedhtC-Bo",
+  authDomain: "inspection-asset.firebaseapp.com",
+  projectId: "inspection-asset",
+  storageBucket: "inspection-asset.firebasestorage.app",
+  messagingSenderId: "749137941986",
+  appId: "1:749137941986:web:8d9685658a9ac6391b55bb"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+document.getElementById('googleSignInBtn').addEventListener('click', ()=>{
+  document.getElementById('authError').style.display = 'none';
+  auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(err=>{
+    console.error(err);
+    document.getElementById('authError').style.display = 'block';
+  });
+});
+document.getElementById('signOutBtn').addEventListener('click', ()=> auth.signOut());
+
+auth.onAuthStateChanged(user=>{
+  const gate = document.getElementById('gate'), app = document.getElementById('app');
+  if(user){
+    gate.style.display = 'none';
+    app.classList.add('on');
+    const photo = document.getElementById('userPhoto');
+    if(user.photoURL) photo.src = user.photoURL; else photo.removeAttribute('src');
+    document.getElementById('userName').textContent = user.displayName || user.email || '';
+    window.__subeyeUser = user;
+    if(window.__subeyeInit) window.__subeyeInit();
+  } else {
+    gate.style.display = 'grid';
+    app.classList.remove('on');
+  }
+});
+</script>
+
+<script>
+/* =========================================================
+   SubEye v2 — data layer keeps the original Firestore shape:
+   stations/{stationKey}/devices/{deviceId}
+   New fields (all optional, back-compatible with v1 docs):
+     bl: { n, mean, m2, approved, daily:[{d,mean,n}] }   learned baseline
+     hist: [numbers]  ring of up to 96 samples for the 24h chart
+   ========================================================= */
+const LINE_WEBHOOK_URL = 'https://n8n.jupetor-cmms.com/webhook/subeye-alarm';
+const TICK_MS = 3000;
+const HIST_MAX = 96;
+const HOURLY_MAX = 168;          // 7 วัน × 24 ชั่วโมง — พอให้โมเดลจับรอบวันได้
+const HIST_PERSIST_MS = 5 * 60 * 1000;
+const C = { ok:'#2ce8a4', warn:'#ffb020', alarm:'#ff4d6a', cy:'#00e5ff', vi:'#8b6bff' };
+
+const SUB_TEMPLATES = [
+  { id:'xfmr',  name:'Transformer Oil Temp', unit:'°C',  kind:'numeric', min:30, max:105, warn:70, alarm:85 },
+  { id:'temp',  name:'Temperature',          unit:'°C',  kind:'numeric', min:24, max:52,  warn:42, alarm:48 },
+  { id:'humid', name:'Humidity',             unit:'%RH', kind:'numeric', min:35, max:85,  warn:75, alarm:82 },
+  { id:'light', name:'Lighting',             unit:'',    kind:'toggle' },
+  { id:'door',  name:'Door / Access',        unit:'',    kind:'toggle' },
+  { id:'leak',  name:'Water Leak',           unit:'',    kind:'binary_alarm' },
+  { id:'smoke', name:'Smoke / Fire',         unit:'',    kind:'binary_alarm' }
+];
+const DISTRICT_TEMPLATES = [
+  { id:'dxfmr',   name:'หม้อแปลงจำหน่าย', unit:'°C', kind:'numeric', min:30, max:105, warn:70, alarm:85 },
+  { id:'lbs',     name:'LBS',             unit:'°C', kind:'numeric', min:25, max:75,  warn:45, alarm:60 },
+  { id:'netxfmr', name:'หม้อแปลงตาข่าย',  unit:'°C', kind:'numeric', min:30, max:105, warn:70, alarm:85 },
+  { id:'unitsub', name:'Unit Substation', unit:'°C', kind:'numeric', min:28, max:90,  warn:60, alarm:75 }
+];
+const DISTRICTS = ['คลองเตย','วัดเลียบ','สามเสน','บางเขน','บางกะปิ','มีนบุรี','นวลจันทร์','ลาดกระบัง','ยานนาวา','ราษฎร์บูรณะ','บางขุนเทียน','บางนา','ธนบุรี','นนทบุรี','บางใหญ่','บางบัวทอง','บางพลี','สมุทรปราการ'];
+const SUBSTATIONS = ['BPT','WTK','MMR'];
+
+let level = 'substation';
+let district = 'คลองเตย';
+let substation = 'BPT';
+let subDevices = [], districtDevices = [];
+let autoSim = true;
+let view = 'dash';
+let detailId = null;
+let alarmFilter = 'ทั้งหมด';
+let healthFilter = 'ทั้งหมด';
+let logs = [];
+let seedCounter = 1;
+
+const $ = id => document.getElementById(id);
+const templates = () => level === 'substation' ? SUB_TEMPLATES : DISTRICT_TEMPLATES;
+const devices = () => level === 'substation' ? subDevices : districtDevices;
+const setDevices = l => { if(level === 'substation') subDevices = l; else districtDevices = l; };
+const tplOf = dev => templates().find(t => t.id === dev.tplId) || templates()[0];
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nowTime = () => new Date().toLocaleTimeString('th-TH', { hour12:false });
+
+/* ---------- Firestore ---------- */
+function sanitizeKey(s){ return String(s).replace(/[^\w\u0E00-\u0E7F-]/g, '_'); }
+function stationKeyFor(lv, dist, sub){
+  return lv === 'substation' ? `sub__${sanitizeKey(dist)}__${sanitizeKey(sub)}` : `district__${sanitizeKey(dist)}`;
+}
+const scopeKey = () => stationKeyFor(level, district, substation);
+function devicesCol(lv, dist, sub){
+  return db.collection('stations').doc(stationKeyFor(lv, dist, sub)).collection('devices');
+}
+
+function newBl(){ return { n:0, mean:0, m2:0, approved:false, daily:[] }; }
+
+function hydrate(d){
+  const bl = Object.assign(newBl(), d.bl || {});
+  const hist = Array.isArray(d.hist) && d.hist.length ? d.hist.slice(-HIST_MAX) : Array.from({length:12}, ()=> Number(d.value) || 0);
+  const hourly = Array.isArray(d.hourly) ? d.hourly.slice(-HOURLY_MAX) : [];
+  return Object.assign({}, d, {
+    value: Number(d.value) || 0,
+    lastStatus: d.status || 'ok',
+    bl, hist, hourly,
+    ml: d.ml && typeof d.ml === 'object' ? d.ml : null,
+    hourBucket: d.hourBucket && typeof d.hourBucket === 'object' ? d.hourBucket : null,
+    updatedMs: d.updatedAt && d.updatedAt.toMillis ? d.updatedAt.toMillis() : Date.now(),
+    _histSaved: 0
+  });
+}
+
+// สะสมค่าเฉลี่ยรายชั่วโมงลง hourly — โมเดล Holt-Winters ฝั่ง n8n ใช้ฟิลด์นี้หา seasonality รายวัน
+function rollHourly(dev){
+  const hourKey = Math.floor(Date.now() / 3600000);
+  const b = dev.hourBucket;
+  if(!b || b.h !== hourKey){
+    if(b && isFinite(b.mean)){
+      dev.hourly.push(Number(b.mean.toFixed(2)));
+      if(dev.hourly.length > HOURLY_MAX) dev.hourly.shift();
+    }
+    dev.hourBucket = { h: hourKey, mean: dev.value, n: 1 };
+    return true;   // ปิดชั่วโมงแล้ว ควรบันทึกลง Firestore
+  }
+  b.n += 1;
+  b.mean += (dev.value - b.mean) / b.n;
+  return false;
+}
+
+async function loadDevices(lv, dist, sub){
+  const snap = await devicesCol(lv, dist, sub).get();
+  return snap.docs.map(doc => hydrate(Object.assign({ id: doc.id }, doc.data())));
+}
+
+async function saveDevice(dev, opts){
+  opts = opts || {};
+  const payload = {
+    tplId: dev.tplId, label: dev.label, loc: dev.loc,
+    value: dev.value, status: dev.lastStatus || 'ok',
+    bl: { n: dev.bl.n, mean: dev.bl.mean, m2: dev.bl.m2, approved: !!dev.bl.approved, daily: (dev.bl.daily || []).slice(-30) },
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  if(opts.hist) payload.hist = dev.hist.slice(-HIST_MAX);
+  if(opts.hist || opts.hourly){
+    payload.hourly = dev.hourly.slice(-HOURLY_MAX);
+    payload.hourBucket = dev.hourBucket;
+  }
+  try{ await devicesCol(level, district, substation).doc(dev.id).set(payload, { merge:true }); }
+  catch(e){ console.error('saveDevice failed', e); }
+}
+async function deleteDevice(id){
+  try{ await devicesCol(level, district, substation).doc(id).delete(); }
+  catch(e){ console.error('deleteDevice failed', e); }
+}
+
+function seedList(lv){
+  const base = lv === 'substation' ? [
+    { tpl:'xfmr',  label:'หม้อแปลง T1',      loc:'Transformer Bay', v:58 },
+    { tpl:'temp',  label:'ตู้ MDB หลัก',      loc:'Panel A',         v:34.2 },
+    { tpl:'temp',  label:'ห้องแบตเตอรี่',      loc:'Battery Rm',      v:29.8 },
+    { tpl:'humid', label:'ห้องคอนโทรล',        loc:'Control Rm',      v:58 },
+    { tpl:'light', label:'ไฟส่องสว่างลาน',      loc:'Yard',            v:1 },
+    { tpl:'door',  label:'ประตูห้องคอนโทรล',     loc:'Control Rm',      v:0 },
+    { tpl:'leak',  label:'พื้นห้องหม้อแปลง',     loc:'Transformer Rm',  v:0 }
+  ] : [
+    { tpl:'dxfmr',   label:'หม้อแปลงจำหน่าย DX-01', loc:'สายป้อน 1',          v:55 },
+    { tpl:'lbs',     label:'LBS-014',                loc:'สายป้อน 2',          v:38 },
+    { tpl:'netxfmr', label:'หม้อแปลงตาข่าย NT-03',   loc:'Underground Vault', v:52 },
+    { tpl:'unitsub', label:'Unit Substation US-02',  loc:'อาคาร A',           v:44 }
+  ];
+  const tpls = lv === 'substation' ? SUB_TEMPLATES : DISTRICT_TEMPLATES;
+  return base.map((d,i)=>{
+    const tpl = tpls.find(t => t.id === d.tpl);
+    return hydrate({
+      id: (lv === 'substation' ? 'sd' : 'dd') + (i+1),
+      tplId: d.tpl, label: d.label, loc: d.loc, value: d.v,
+      status: statusFor(tpl, d.v)
+    });
+  });
+}
+
+async function loadOrSeed(lv){
+  const list = await loadDevices(lv, district, substation);
+  if(list.length) return list;
+  const seeded = seedList(lv);
+  const keep = level; level = lv;
+  for(const dev of seeded) await saveDevice(dev, { hist:true });
+  level = keep;
+  return seeded;
+}
+
+/* ---------- status / baseline / health ---------- */
+function statusFor(tpl, value){
+  if(!tpl) return 'ok';
+  if(tpl.kind === 'numeric') return value >= tpl.alarm ? 'alarm' : value >= tpl.warn ? 'warn' : 'ok';
+  if(tpl.kind === 'binary_alarm') return value ? 'alarm' : 'ok';
+  return 'ok';
+}
+const statusColor = s => s === 'ok' ? C.ok : s === 'warn' ? C.warn : C.alarm;
+const statusText  = s => s === 'ok' ? 'ปกติ' : s === 'warn' ? 'เฝ้าระวัง' : 'ALARM';
+const statusBg    = s => s === 'ok' ? 'rgba(44,232,164,.12)' : s === 'warn' ? 'rgba(255,176,32,.14)' : 'rgba(255,77,106,.16)';
+
+const blSd = bl => bl.n > 1 ? Math.sqrt(bl.m2 / (bl.n - 1)) : 0;
+
+// Welford — only learns while the device reads normal, so faults never poison the baseline
+function learnBaseline(dev, tpl){
+  if(tpl.kind !== 'numeric') return;
+  if(statusFor(tpl, dev.value) !== 'ok') return;
+  const bl = dev.bl;
+  bl.n += 1;
+  const delta = dev.value - bl.mean;
+  bl.mean += delta / bl.n;
+  bl.m2 += delta * (dev.value - bl.mean);
+
+  const day = new Date().toISOString().slice(0,10);
+  const daily = bl.daily || (bl.daily = []);
+  let today = daily[daily.length - 1];
+  if(!today || today.d !== day){ today = { d: day, mean: dev.value, n: 1 }; daily.push(today); }
+  else { today.n += 1; today.mean += (dev.value - today.mean) / today.n; }
+  if(daily.length > 30) bl.daily = daily.slice(-30);
+}
+
+// least-squares slope over daily means, in units per day
+function trendSlope(bl){
+  const d = (bl.daily || []).filter(x => x && isFinite(x.mean));
+  if(d.length < 3) return null;
+  const n = d.length;
+  let sx=0, sy=0, sxx=0, sxy=0;
+  d.forEach((p,i)=>{ sx+=i; sy+=p.mean; sxx+=i*i; sxy+=i*p.mean; });
+  const den = n*sxx - sx*sx;
+  if(!den) return null;
+  return (n*sxy - sx*sy) / den;
+}
+
+/* อ่านผลจากโมเดลฝั่งเสิร์ฟเวอร์ (ฟิลด์ ml)
+   รองรับทั้ง snake_case จาก GitHub Actions และ camelCase จาก workflow n8n */
+function srvMl(dev){
+  const m = dev.ml;
+  if(!m || typeof m !== 'object') return null;
+  const raw = m.score;
+  const score = (raw === null || raw === undefined || raw === '') ? NaN : Number(raw);
+  const usable = isFinite(score) && m.level !== 'learning' && m.method !== 'none';
+  const pick = (a,b)=> m[a] !== undefined ? m[a] : m[b];
+  const age = m.computedAt ? (Date.now() - new Date(m.computedAt).getTime()) / 86400000 : null;
+  return {
+    ok: usable,
+    score: usable ? Math.round(score) : null,
+    level: m.level || null,
+    method: m.method || 'server',
+    trend: Number(m.trend),
+    daysToWarn: Number(pick('days_to_warn','daysToWarn')),
+    daysToAlarm: Number(pick('days_to_alarm','daysToAlarm')),
+    z: Number(pick('z_robust','zRobust')),
+    mae: Number(m.mae),
+    maeBaseline: Number(pick('mae_baseline','maeBaseline')),
+    forecast: pick('forecast24','forecast7') || null,
+    note: m.note || null,
+    ageDays: age,
+    stale: age !== null && age > 2,
+    computedAt: m.computedAt || null
+  };
+}
+const methodLabel = s => s === 'lstm' ? 'LSTM' : s === 'holt-winters' || s === 'holt-winters-additive' ? 'HOLT-WINTERS' : String(s||'SERVER').toUpperCase();
+
+function healthOf(dev, tpl){
+  const stale = tpl.kind === 'numeric' && (Date.now() - (dev.updatedMs || Date.now())) > TICK_MS * 20;
+  if(tpl.kind !== 'numeric'){
+    const st = statusFor(tpl, dev.value);
+    return { na:true, score: st === 'ok' ? 100 : 40, z:null, sd:0, slope:null, days:null, stale,
+      color: st === 'ok' ? C.ok : C.alarm, ready:false };
+  }
+  const bl = dev.bl, sd = blSd(bl);
+  const ready = bl.n >= 30 && sd > 0.05;
+  const z = ready ? (dev.value - bl.mean) / sd : null;
+  const slope = trendSlope(bl);
+  let days = null;
+  if(slope !== null && slope > 0.02 && dev.value < tpl.warn) days = (tpl.warn - dev.value) / slope;
+  else if(dev.value >= tpl.warn) days = 0;
+
+  const zPen = z === null ? 0 : Math.min(46, Math.max(0, Math.abs(z) - 1.4) * 11);
+  const fPen = days === null ? 0 : Math.max(0, 30 - days) / 30 * 30;
+  const sPen = stale ? 22 : 0;
+  const localScore = Math.max(0, Math.min(100, Math.round(100 - zPen - fPen - sPen)));
+
+  // คะแนนจากเสิร์ฟเวอร์มีน้ำหนักกว่า เพราะเห็นข้อมูล 7 วันและแยกรอบวันออกได้ — ในเครื่องเป็นตัวสำรอง
+  const srv = srvMl(dev);
+  const useSrv = !!(srv && srv.ok && !srv.stale);
+  const score = useSrv ? srv.score : localScore;
+
+  return { na:false, score, localScore, srv, useSrv,
+    method: useSrv ? srv.method : 'on-device',
+    z, sd, mean: bl.mean, n: bl.n, slope, days, stale, ready,
+    color: score >= 85 ? C.ok : score >= 70 ? C.warn : C.alarm };
+}
+
+/* ---------- alarms log ---------- */
+function addLog(entry){ logs.unshift(entry); if(logs.length > 60) logs.pop(); if(view === 'alarms') renderAlarms(); renderUnack(); }
+
+async function sendAlarm(dev, tpl, status){
+  const valueText = tpl.kind === 'numeric' ? `${dev.value.toFixed(1)}${tpl.unit}` : (status === 'alarm' ? 'ตรวจพบ' : 'ปกติ');
+  const scopeText = level === 'substation' ? `${substation}/${dev.loc}` : `${district}/${dev.loc}`;
+  const message = `${status === 'alarm' ? '🔴 ALARM' : '🟡 WARNING'} · ${valueText} · ${scopeText}`;
+  const entry = { id:'lg'+Date.now()+Math.random(), device: dev.label, message, level: status,
+    scope: scopeText, value: valueText, state:'pending', time: nowTime(), acked:false };
+  addLog(entry);
+  try{
+    const res = await fetch(LINE_WEBHOOK_URL, {
+      method:'POST', headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({
+        source:'SubEye', level, station: district,
+        substation: level === 'substation' ? substation : undefined,
+        device: dev.label, location: dev.loc, template: tpl.name,
+        status, value: dev.value, unit: tpl.unit, message,
+        timestamp: new Date().toISOString(),
+        health: healthOf(dev, tpl).score,
+        baseline: tpl.kind === 'numeric' && dev.bl.n > 1 ? { mean: dev.bl.mean, sd: blSd(dev.bl), approved: !!dev.bl.approved } : undefined
+      })
+    });
+    entry.state = res.ok ? 'sent' : 'failed';
+    if(!res.ok) entry.message = `${message} (HTTP ${res.status})`;
+  }catch(e){
+    entry.state = 'failed';
+    entry.message = `${message} (network/CORS error)`;
+  }
+  if(view === 'alarms') renderAlarms();
+  renderDashAlarms();
+}
+
+function checkAndFire(dev, tpl){
+  const next = statusFor(tpl, dev.value), prev = dev.lastStatus || 'ok';
+  if(next !== prev && (next === 'alarm' || next === 'warn')) sendAlarm(dev, tpl, next);
+  dev.lastStatus = next;
+}
+
+/* ---------- svg helpers ---------- */
+function polyline(vals, w, h, min, max, color, width){
+  if(!vals.length) return '';
+  const span = (max - min) || 1;
+  const pts = vals.map((v,i)=>{
+    const x = vals.length > 1 ? i * (w / (vals.length - 1)) : 0;
+    const y = h - Math.max(0, Math.min(1, (v - min) / span)) * h;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="${width||1.4}" stroke-linejoin="round" opacity=".9"></polyline>`;
+}
+
+/* ---------- render: nav / topbar ---------- */
+const TITLES = {
+  dash:    ()=> ['ภาพรวม', `${level === 'substation' ? 'สถานีไฟฟ้า '+substation : 'อุปกรณ์จำหน่าย'} · เขต${district} · อัปเดตทุก ${TICK_MS/1000} วินาที`],
+  devices: ()=> ['สถานี / อุปกรณ์', `${devices().length} อุปกรณ์ใน ${scopeKey()}`],
+  detail:  ()=> { const d = findDetail(); return ['รายละเอียดอุปกรณ์', d ? `${d.label} · ${d.loc}` : '—']; },
+  health:  ()=> ['Device Health', 'โมเดลเทียบค่าปัจจุบันกับ Baseline ที่เรียนรู้จากข้อมูลจริง'],
+  alarms:  ()=> ['แจ้งเตือน', 'เหตุการณ์ในเซสชันนี้ · ส่งเข้ากลุ่ม LINE ผ่าน n8n']
+};
+
+function setView(v){
+  view = v;
+  document.querySelectorAll('.view').forEach(s => s.classList.remove('on'));
+  const el = $('view-' + (v === 'detail' ? 'detail' : v));
+  if(el) el.classList.add('on');
+  document.querySelectorAll('.navitem').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  const t = (TITLES[v] || TITLES.dash)();
+  $('pageTitle').textContent = t[0];
+  $('pageSub').textContent = t[1];
+  if(v === 'dash') renderDash();
+  if(v === 'devices') renderDevices();
+  if(v === 'detail') renderDetail();
+  if(v === 'health') renderHealth();
+  if(v === 'alarms') renderAlarms();
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('.navitem').forEach(b => b.addEventListener('click', ()=> setView(b.dataset.view)));
+$('unackChip').addEventListener('click', ()=> setView('alarms'));
+
+function renderUnack(){
+  const n = logs.filter(l => !l.acked && l.level !== 'ok').length;
+  $('unackText').textContent = 'ค้างรับทราบ ' + n;
+  $('navAlarmCount').textContent = n ? n : '';
+}
+
+setInterval(()=>{ $('clock').textContent = nowTime(); }, 1000);
+
+/* ---------- render: dashboard ---------- */
+function renderDash(){
+  const list = devices(), tpls = templates();
+  const num = list.filter(d => (tpls.find(t=>t.id===d.tplId)||{}).kind === 'numeric');
+  const statuses = list.map(d => statusFor(tplOf(d), d.value));
+  const alarms = statuses.filter(s => s === 'alarm').length;
+  const warns = statuses.filter(s => s === 'warn').length;
+  const healths = list.map(d => healthOf(d, tplOf(d))).filter(h => !h.na);
+  const worst = healths.length ? Math.min.apply(null, healths.map(h => h.score)) : 100;
+  const peak = num.length ? Math.max.apply(null, num.map(d => d.value)) : 0;
+
+  $('dashKpis').innerHTML = [
+    { lb:'อุปกรณ์ในขอบเขตนี้', v:String(list.length), u:'ตัว', nt:`${num.length} ตัวเป็นค่าตัวเลข`, c:C.ok },
+    { lb:'สถานะ ALARM', v:String(alarms), u:'รายการ', nt:`เฝ้าระวัง ${warns} รายการ`, c: alarms ? C.alarm : C.ok },
+    { lb:'คะแนนสุขภาพต่ำสุด', v:String(worst), u:'/ 100', nt: healths.length ? 'ดูรายละเอียดที่หน้า Device Health' : 'ยังไม่มีอุปกรณ์ค่าตัวเลข', c: worst >= 85 ? C.ok : worst >= 70 ? C.warn : C.alarm },
+    { lb:'ค่าสูงสุดในขอบเขต', v: peak ? peak.toFixed(1) : '—', u: num.length ? (tplOf(num[0]).unit || '') : '', nt:'จากอุปกรณ์ค่าตัวเลขทั้งหมด', c:C.cy }
+  ].map(k => `<div class="kpi"><div class="bar" style="background:${k.c}"></div><div class="lb">${esc(k.lb)}</div><div class="vl"><b style="color:${k.c}">${esc(k.v)}</b><span>${esc(k.u)}</span></div><div class="nt">${esc(k.nt)}</div></div>`).join('');
+
+  $('dashScope').textContent = scopeKey();
+  $('dashList').innerHTML = list.length ? list.map(d=>{
+    const tpl = tplOf(d), s = statusFor(tpl, d.value), c = statusColor(s), h = healthOf(d, tpl);
+    const val = tpl.kind === 'numeric' ? d.value.toFixed(1) + (tpl.unit||'') : (d.value ? (tpl.kind==='toggle'?'เปิด':'ตรวจพบ') : (tpl.kind==='toggle'?'ปิด':'ปกติ'));
+    return `<div class="trow" style="grid-template-columns:1fr 120px 88px 68px;border-bottom:none;cursor:pointer" data-open="${esc(d.id)}">
+      <div style="display:flex;align-items:center;gap:11px;min-width:0">
+        <span class="sdot" style="background:${c}"></span>
+        <div style="min-width:0"><div class="dv">${esc(d.label)}</div><div class="ms">${esc(d.loc)} · ${esc(tpl.name)}</div></div>
+      </div>
+      <div class="mono" style="font-size:13px;color:${c};text-align:right">${esc(val)}</div>
+      <div class="mono" style="font-size:11px;color:var(--dim2);text-align:right">${h.na ? '—' : 'HEALTH '+h.score}</div>
+      <div style="text-align:right;font-size:11px;color:${c}">${esc(statusText(s))}</div>
+    </div>`;
+  }).join('') : `<div class="pb hint">ยังไม่มีอุปกรณ์ในขอบเขตนี้</div>`;
+  $('dashList').querySelectorAll('[data-open]').forEach(el => el.addEventListener('click', ()=> openDetail(el.dataset.open)));
+
+  const fresh = list.filter(d => Date.now() - (d.updatedMs||0) < TICK_MS * 20).length;
+  $('pipeline').innerHTML = [
+    { nm:'Firestore · stations/'+scopeKey(), c:C.ok, vl:'CONNECTED' },
+    { nm:'n8n · subeye-alarm', c: logs.some(l=>l.state==='failed') ? C.warn : C.ok, vl: logs.length ? 'LAST '+(logs[0].state||'').toUpperCase() : 'IDLE' },
+    { nm:'LINE Messaging API', c: C.ok, vl: 'PUSHED '+logs.filter(l=>l.state==='sent').length },
+    { nm:'ค่าที่อัปเดตล่าสุด', c: fresh === list.length ? C.ok : C.warn, vl: fresh+'/'+list.length+' FRESH' }
+  ].map(p => `<div class="rowline"><span class="sdot" style="background:${p.c}"></span><span class="nm">${esc(p.nm)}</span><span class="fill"></span><span class="vl">${esc(p.vl)}</span></div>`).join('');
+
+  renderDashAlarms();
+}
+
+function renderDashAlarms(){
+  const el = $('dashAlarms');
+  if(!el) return;
+  if(!logs.length){ el.innerHTML = `<div class="hint">ยังไม่มีการแจ้งเตือนในเซสชันนี้ — ลองปรับค่าให้เกินเกณฑ์</div>`; return; }
+  el.innerHTML = logs.slice(0,5).map(l => `
+    <div style="display:flex;gap:12px;padding:11px 0;border-top:1px solid var(--line2)">
+      <div style="width:3px;border-radius:2px;background:${statusColor(l.level)}"></div>
+      <div style="flex:1;min-width:0"><div class="dv">${esc(l.device)}</div><div class="ms">${esc(l.message)}</div></div>
+      <div class="mono" style="font-size:10px;color:var(--dim2);white-space:nowrap">${esc(l.time)}</div>
+    </div>`).join('');
+}
+
+/* ---------- render: devices ---------- */
+function renderScopeBar(){
+  const sel = $('stationSelect');
+  if(!sel.options.length){
+    sel.innerHTML = DISTRICTS.map(d => `<option value="${esc(d)}">การไฟฟ้านครหลวงเขต${esc(d)}</option>`).join('');
+  }
+  sel.value = district;
+  $('substationPills').innerHTML = SUBSTATIONS.map(s => `<button class="pill ${s===substation?'on':''}" data-sub="${s}">${s}</button>`).join('');
+  $('substationPills').querySelectorAll('[data-sub]').forEach(b => b.addEventListener('click', async ()=>{
+    substation = b.dataset.sub;
+    subDevices = await loadOrSeed('substation');
+    renderAll();
+  }));
+  $('substationWrap').style.display = level === 'substation' ? 'block' : 'none';
+  $('tabSubstation').className = 'pill' + (level === 'substation' ? ' on' : '');
+  $('tabDistrict').className = 'pill' + (level === 'district' ? ' on' : '');
+  $('tabSubstation').style.background = level === 'substation' ? 'rgba(0,229,255,.14)' : 'none';
+  $('tabDistrict').style.background = level === 'district' ? 'rgba(0,229,255,.14)' : 'none';
+  $('scopeKey').textContent = scopeKey();
+}
+
+function renderDevices(){
+  renderScopeBar();
+  const grid = $('deviceGrid'), list = devices();
+  if(!list.length){
+    grid.innerHTML = `<div class="empty"><b>${level==='substation'?'ยังไม่มีอุปกรณ์ในสถานีนี้':'ยังไม่มีอุปกรณ์ในเขตนี้'}</b>กด “+ เพิ่มอุปกรณ์” เพื่อเริ่มเพิ่มอุปกรณ์แรก</div>`;
+    return;
+  }
+  grid.innerHTML = list.map(d=>{
+    const tpl = tplOf(d), s = statusFor(tpl, d.value), c = statusColor(s), h = healthOf(d, tpl);
+    let body;
+    if(tpl.kind === 'numeric'){
+      const lo = tpl.min - 2, hi = tpl.max + 4;
+      const sd = blSd(d.bl);
+      const chartMin = Math.min.apply(null, d.hist.concat([tpl.min]));
+      const chartMax = Math.max.apply(null, d.hist.concat([tpl.max]));
+      const band = h.ready ? (()=>{
+        const span = (chartMax - chartMin) || 1;
+        const yTop = 34 - Math.max(0, Math.min(1, (d.bl.mean + 2*sd - chartMin)/span)) * 34;
+        const yBot = 34 - Math.max(0, Math.min(1, (d.bl.mean - 2*sd - chartMin)/span)) * 34;
+        return `<rect x="0" y="${yTop.toFixed(1)}" width="240" height="${Math.max(2, yBot-yTop).toFixed(1)}" fill="rgba(139,107,255,.16)"></rect>`;
+      })() : '';
+      body = `
+        <div class="valrow"><b style="color:${c}">${d.value.toFixed(1)}</b><span class="u">${esc(tpl.unit)}</span><span class="badge" style="background:${statusBg(s)};color:${c}">${esc(statusText(s))}</span></div>
+        <div class="spark"><svg viewBox="0 0 240 34" preserveAspectRatio="none">${band}${polyline(d.hist, 240, 34, chartMin, chartMax, c)}</svg></div>
+        <div class="ctl">
+          <button class="stepbtn" data-step="-1" data-id="${esc(d.id)}">−</button>
+          <input type="range" data-slider="${esc(d.id)}" min="${lo}" max="${hi}" step="0.1" value="${d.value}">
+          <button class="stepbtn" data-step="1" data-id="${esc(d.id)}">+</button>
+        </div>`;
+    } else if(tpl.kind === 'toggle'){
+      body = `<div class="togrow"><span class="st">${d.value ? 'เปิด' : 'ปิด'}</span><div class="sw ${d.value?'on':''}" data-toggle="${esc(d.id)}"><i></i></div></div>`;
+    } else {
+      body = `<div class="togrow"><span class="st" style="color:${d.value?C.alarm:C.ok}">${d.value ? 'ตรวจพบ' : 'ปกติ'}</span><div class="sw ${d.value?'on':''}" data-toggle="${esc(d.id)}" style="${d.value?'background:rgba(255,77,106,.5)':''}"><i></i></div></div><div class="hint">กดเพื่อจำลองสถานะแจ้งเตือนนี้</div>`;
+    }
+    return `<div class="dcard ${s}">
+      <div class="top">
+        <div style="min-width:0;flex:1;cursor:pointer" data-open="${esc(d.id)}">
+          <div class="nm">${esc(d.label)}</div>
+          <div class="meta">${esc(d.loc)} · ${esc(tpl.name)}${h.na?'':' · HEALTH '+h.score}</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="iconbtn" data-edit="${esc(d.id)}" title="แก้ไข">✎</button>
+          <button class="iconbtn danger" data-del="${esc(d.id)}" title="ลบ">✕</button>
+          <button class="iconbtn" data-open="${esc(d.id)}" title="รายละเอียด">›</button>
+        </div>
+      </div>
+      ${body}
+    </div>`;
+  }).join('');
+
+  grid.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', ()=> openDetail(b.dataset.open)));
+  grid.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', ()=> openEditModal(b.dataset.edit)));
+  grid.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', ()=>{
+    const id = b.dataset.del;
+    setDevices(devices().filter(d => d.id !== id));
+    deleteDevice(id);
+    renderAll();
+  }));
+  grid.querySelectorAll('[data-toggle]').forEach(sw => sw.addEventListener('click', ()=>{
+    const dev = devices().find(d => d.id === sw.dataset.toggle);
+    dev.value = dev.value ? 0 : 1;
+    dev.updatedMs = Date.now();
+    checkAndFire(dev, tplOf(dev));
+    saveDevice(dev);
+    renderAll();
+  }));
+  let saveTimer = null;
+  grid.querySelectorAll('[data-slider]').forEach(sl => sl.addEventListener('input', ()=>{
+    const dev = devices().find(d => d.id === sl.dataset.slider);
+    applyValue(dev, parseFloat(sl.value));
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(()=> saveDevice(dev, { hist:true }), 500);
+    renderDevices();
+  }));
+  grid.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', ()=>{
+    const dev = devices().find(d => d.id === b.dataset.id), tpl = tplOf(dev);
+    applyValue(dev, Math.max(tpl.min - 2, Math.min(tpl.max + 4, dev.value + Number(b.dataset.step))));
+    saveDevice(dev, { hist:true });
+    renderAll();
+  }));
+}
+
+function applyValue(dev, v){
+  const tpl = tplOf(dev);
+  dev.value = v;
+  dev.updatedMs = Date.now();
+  dev.hist.push(v);
+  if(dev.hist.length > HIST_MAX) dev.hist.shift();
+  const hourClosed = rollHourly(dev);
+  learnBaseline(dev, tpl);
+  checkAndFire(dev, tpl);
+  if(hourClosed) saveDevice(dev, { hist:true });
+}
+
+/* ---------- render: detail ---------- */
+function findDetail(){
+  let d = devices().find(x => x.id === detailId);
+  if(!d){ d = devices()[0] || null; detailId = d ? d.id : null; }
+  return d;
+}
+function openDetail(id){ detailId = id; setView('detail'); }
+$('detailBack').addEventListener('click', ()=> setView('devices'));
+
+function renderDetail(){
+  const dev = findDetail();
+  if(!dev){ setView('devices'); return; }
+  const tpl = tplOf(dev), s = statusFor(tpl, dev.value), c = statusColor(s), h = healthOf(dev, tpl);
+  const numeric = tpl.kind === 'numeric';
+  const sd = blSd(dev.bl);
+
+  $('detailName').textContent = dev.label;
+  $('detailMeta').textContent = `${dev.loc} · ${tpl.name} · ${scopeKey()}`;
+  $('detailVal').textContent = numeric ? dev.value.toFixed(1) : (dev.value ? (tpl.kind==='toggle'?'เปิด':'ตรวจพบ') : (tpl.kind==='toggle'?'ปิด':'ปกติ'));
+  $('detailVal').style.color = c;
+  $('detailUnit').textContent = tpl.unit || '';
+  $('detailBadge').textContent = statusText(s);
+  $('detailBadge').style.background = statusBg(s);
+  $('detailBadge').style.color = c;
+  $('healthVal').textContent = h.na ? '—' : h.score;
+  $('healthVal').style.color = h.color;
+  $('healthChip').style.background = h.na ? 'rgba(140,180,255,.07)' : statusBg(h.score >= 85 ? 'ok' : h.score >= 70 ? 'warn' : 'alarm');
+
+  // chart
+  const W = 1000, H = 260;
+  const vals = dev.hist.slice();
+  const pool = vals.concat(numeric ? [tpl.min, tpl.max] : [0,1]);
+  const lo = Math.min.apply(null, pool), hi = Math.max.apply(null, pool);
+  const y = v => H - Math.max(0, Math.min(1, (v - lo) / ((hi - lo)||1))) * H;
+  const bandSvg = (numeric && h.ready) ? `
+    <rect x="0" y="${y(dev.bl.mean + 2*sd).toFixed(1)}" width="${W}" height="${Math.max(3, y(dev.bl.mean - 2*sd) - y(dev.bl.mean + 2*sd)).toFixed(1)}" fill="rgba(139,107,255,.13)"></rect>
+    <line x1="0" y1="${y(dev.bl.mean).toFixed(1)}" x2="${W}" y2="${y(dev.bl.mean).toFixed(1)}" stroke="${C.vi}" stroke-width="1" stroke-dasharray="2 5" opacity=".85"></line>` : '';
+  const thrSvg = numeric ? `
+    <line x1="0" y1="${y(tpl.warn).toFixed(1)}" x2="${W}" y2="${y(tpl.warn).toFixed(1)}" stroke="${C.warn}" stroke-width="1" stroke-dasharray="5 6" opacity=".7"></line>
+    <line x1="0" y1="${y(tpl.alarm).toFixed(1)}" x2="${W}" y2="${y(tpl.alarm).toFixed(1)}" stroke="${C.alarm}" stroke-width="1" stroke-dasharray="5 6" opacity=".7"></line>` : '';
+  const gridSvg = [0.1,0.3,0.5,0.7,0.9].map(p => `<line x1="0" y1="${(H*p).toFixed(0)}" x2="${W}" y2="${(H*p).toFixed(0)}" stroke="rgba(140,180,255,.09)" stroke-width="1"></line>`).join('');
+  const lastX = vals.length > 1 ? W : 0;
+  $('detailChart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <defs><linearGradient id="fillg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${C.cy}" stop-opacity=".26"></stop><stop offset="100%" stop-color="${C.cy}" stop-opacity="0"></stop></linearGradient></defs>
+    ${gridSvg}${bandSvg}${thrSvg}
+    ${polyline(vals, W, H, lo, hi, C.cy, 2)}
+    <circle cx="${lastX}" cy="${y(dev.value).toFixed(1)}" r="4.5" fill="${'#04070d'}" stroke="${c}" stroke-width="2"></circle>
+  </svg>`;
+  $('bandTxt').textContent = h.ready ? `BASELINE ±2σ · ${(dev.bl.mean-2*sd).toFixed(1)}–${(dev.bl.mean+2*sd).toFixed(1)}${tpl.unit}` : 'BASELINE ยังเรียนรู้ไม่พอ';
+  $('detailTicks').innerHTML = `<span>เก่าสุด (${vals.length} จุด)</span><span>ล่าสุด ${nowTime()}</span>`;
+
+  const mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+  const avg = vals.reduce((a,b)=>a+b,0) / (vals.length||1);
+  $('detailStats').innerHTML = [
+    { lb:'ค่าปัจจุบัน', v: numeric ? dev.value.toFixed(1) : (dev.value?'1':'0'), c },
+    { lb:'ต่ำสุดที่เก็บไว้', v: mn.toFixed(1), c:'#c8d3e6' },
+    { lb:'สูงสุดที่เก็บไว้', v: mx.toFixed(1), c: numeric && mx >= tpl.alarm ? C.alarm : numeric && mx >= tpl.warn ? C.warn : '#c8d3e6' },
+    { lb:'เฉลี่ยที่เก็บไว้', v: avg.toFixed(1), c:'#c8d3e6' }
+  ].map(k => `<div class="kpi"><div class="lb">${esc(k.lb)}</div><div class="vl"><b style="color:${k.c};font-size:22px">${esc(k.v)}</b></div></div>`).join('');
+
+  // baseline box
+  $('blMean').textContent = h.ready ? dev.bl.mean.toFixed(1) : '—';
+  $('blSd').textContent = h.ready ? `± ${sd.toFixed(1)} ${tpl.unit}` : `เก็บแล้ว ${dev.bl.n}/30 จุด`;
+  $('blState').textContent = dev.bl.approved ? 'อนุมัติแล้ว' : 'รออนุมัติ';
+  $('blState').style.background = dev.bl.approved ? 'rgba(139,107,255,.18)' : 'rgba(255,176,32,.14)';
+  $('blState').style.color = dev.bl.approved ? '#cbc0ff' : C.warn;
+  $('blRows').innerHTML = [
+    ['เบี่ยงเบนจากปกติ', h.z === null ? 'ยังไม่พอ' : `${h.z>=0?'+':''}${h.z.toFixed(1)}σ`, h.z === null ? '#c8d3e6' : Math.abs(h.z)>=3?C.alarm:Math.abs(h.z)>=2?C.warn:C.ok],
+    ['แนวโน้มต่อวัน', h.slope === null ? 'ต้องมีข้อมูล 3 วัน' : `${h.slope>=0?'+':''}${h.slope.toFixed(2)} ${tpl.unit}/วัน`, '#c8d3e6'],
+    ['คาดว่าถึงเกณฑ์เตือน', h.days === null ? 'แนวโน้มคงที่' : h.days <= 0 ? 'เกินเกณฑ์แล้ว' : `${Math.round(h.days)} วัน`, h.days === null ? '#c8d3e6' : h.days <= 7 ? C.alarm : h.days <= 21 ? C.warn : '#c8d3e6'],
+    ['ข้อมูลที่ใช้เรียนรู้', `${dev.bl.n.toLocaleString()} จุด · ${(dev.bl.daily||[]).length} วัน`, '#c8d3e6'],
+    ['จุดรายชั่วโมงป้อนโมเดล', `${(dev.hourly||[]).length}/168`, (dev.hourly||[]).length >= 48 ? C.ok : C.warn]
+  ].map(r => `<div class="kv"><span>${esc(r[0])}</span><b style="color:${r[2]}">${esc(r[1])}</b></div>`).join('');
+
+  // กล่องผลจากโมเดลฝั่งเสิร์ฟเวอร์ — ซ่อนเมื่อยังไม่มีฟิลด์ ml
+  const srvBox = $('srvMlBox');
+  if(h.srv && (h.srv.ok || h.srv.note)){
+    srvBox.style.display = 'block';
+    const s = h.srv;
+    const when = s.computedAt ? new Date(s.computedAt).toLocaleString('th-TH', { dateStyle:'short', timeStyle:'short' }) : '—';
+    const rows = [
+      ['โมเดลที่ใช้', s.ok ? methodLabel(s.method) : 'ยังไม่เริ่ม', s.method === 'lstm' ? C.vi : C.cy],
+      ['คะแนนจากเสิร์ฟเวอร์', s.ok ? `${s.score}/100` : (s.note || (s.level === 'learning' ? 'กำลังเรียนรู้ ข้อมูลยังไม่พอ' : 'ยังไม่ประเมิน')), s.ok ? (s.score>=85?C.ok:s.score>=70?C.warn:C.alarm) : '#8a97ad'],
+      ['คะแนนที่คำนวณในเครื่อง', `${h.localScore}/100`, '#c8d3e6'],
+      ['แนวโน้มจากโมเดล', isFinite(s.trend) ? `${s.trend>=0?'+':''}${s.trend} ${tpl.unit}/วัน` : '—', '#c8d3e6'],
+      ['พยากรณ์ถึงเกณฑ์เตือน', isFinite(s.daysToWarn) ? (s.daysToWarn <= 0 ? 'เกินแล้ว' : `${Math.round(s.daysToWarn)} วัน`) : 'คงที่', isFinite(s.daysToWarn) && s.daysToWarn <= 7 ? C.alarm : '#c8d3e6'],
+      ['ความคลาดเคลื่อน MAE', isFinite(s.mae) ? `${s.mae}${isFinite(s.maeBaseline) ? ` (baseline ${s.maeBaseline})` : ''}` : '—', '#c8d3e6'],
+      ['คำนวณเมื่อ', when + (s.stale ? ' · เก่ากว่า 2 วัน' : ''), s.stale ? C.warn : '#c8d3e6']
+    ];
+    $('srvMlRows').innerHTML = rows.map(r => `<div class="kv"><span>${esc(r[0])}</span><b style="color:${r[2]}">${esc(r[1])}</b></div>`).join('');
+    $('srvMlUsed').textContent = h.useSrv ? 'ใช้ค่านี้แสดง' : 'สำรอง';
+    $('srvMlUsed').style.background = h.useSrv ? 'rgba(0,229,255,.14)' : 'rgba(140,180,255,.1)';
+    $('srvMlUsed').style.color = h.useSrv ? C.cy : '#8a97ad';
+    const fc = Array.isArray(s.forecast) ? s.forecast.map(Number).filter(v => isFinite(v)) : [];
+    if(fc.length){
+      const pool = fc.concat([tpl.warn, tpl.alarm, dev.value]);
+      const lo2 = Math.min.apply(null, pool), hi2 = Math.max.apply(null, pool);
+      const wy = v => 46 - Math.max(0, Math.min(1, (v-lo2)/((hi2-lo2)||1))) * 46;
+      $('srvMlChart').innerHTML = `<svg viewBox="0 0 300 46" preserveAspectRatio="none" style="width:100%;height:100%;display:block;overflow:visible">
+        <line x1="0" y1="${wy(tpl.warn).toFixed(1)}" x2="300" y2="${wy(tpl.warn).toFixed(1)}" stroke="${C.warn}" stroke-width="1" stroke-dasharray="4 5" opacity=".6"></line>
+        <line x1="0" y1="${wy(tpl.alarm).toFixed(1)}" x2="300" y2="${wy(tpl.alarm).toFixed(1)}" stroke="${C.alarm}" stroke-width="1" stroke-dasharray="4 5" opacity=".6"></line>
+        ${polyline(fc, 300, 46, lo2, hi2, s.method === 'lstm' ? C.vi : C.cy, 1.6)}
+      </svg>`;
+      $('srvMlChartWrap').style.display = 'block';
+      $('srvMlChartCap').textContent = `พยากรณ์ ${fc.length} ชั่วโมงข้างหน้า · ${Math.min.apply(null,fc).toFixed(1)}–${Math.max.apply(null,fc).toFixed(1)}${tpl.unit}`;
+    } else {
+      $('srvMlChartWrap').style.display = 'none';
+    }
+  } else {
+    srvBox.style.display = 'none';
+  }
+  $('blApprove').textContent = dev.bl.approved ? 'ยกเลิกอนุมัติ' : 'อนุมัติเป็นค่าปกติ';
+  $('blApprove').disabled = !numeric;
+  $('blSnap').disabled = !numeric;
+  $('blHint').textContent = numeric ? 'Baseline เรียนรู้เฉพาะช่วงที่สถานะปกติ ค่าที่ผิดปกติจึงไม่ถูกนับเข้าค่าเฉลี่ย' : 'อุปกรณ์แบบเปิด/ปิด ไม่ใช้ baseline ตัวเลข';
+
+  // manual control
+  if(numeric){
+    const lo2 = tpl.min - 2, hi2 = tpl.max + 4;
+    $('detailCtl').innerHTML = `<button class="stepbtn" id="dMinus">−</button><input type="range" id="dSlider" min="${lo2}" max="${hi2}" step="0.1" value="${dev.value}"><button class="stepbtn" id="dPlus">+</button>`;
+    $('detailThresholds').innerHTML = `<span style="color:var(--dim2);font-size:10.5px">MIN ${tpl.min}</span><span style="color:${C.warn};font-size:10.5px">WARN ${tpl.warn}</span><span style="color:${C.alarm};font-size:10.5px">ALARM ${tpl.alarm}</span><span style="color:var(--dim2);font-size:10.5px">MAX ${tpl.max}</span>`;
+    let t = null;
+    $('dSlider').addEventListener('input', e=>{
+      applyValue(dev, parseFloat(e.target.value));
+      clearTimeout(t); t = setTimeout(()=> saveDevice(dev, { hist:true }), 500);
+      renderDetail();
+    });
+    $('dMinus').addEventListener('click', ()=>{ applyValue(dev, Math.max(lo2, dev.value-1)); saveDevice(dev,{hist:true}); renderDetail(); });
+    $('dPlus').addEventListener('click', ()=>{ applyValue(dev, Math.min(hi2, dev.value+1)); saveDevice(dev,{hist:true}); renderDetail(); });
+  } else {
+    $('detailCtl').innerHTML = `<div class="sw ${dev.value?'on':''}" id="dToggle"><i></i></div><span class="hint" style="margin:0">กดเพื่อสลับสถานะ</span>`;
+    $('detailThresholds').innerHTML = '';
+    $('dToggle').addEventListener('click', ()=>{
+      dev.value = dev.value ? 0 : 1; dev.updatedMs = Date.now();
+      checkAndFire(dev, tpl); saveDevice(dev); renderDetail();
+    });
+  }
+
+  const evs = logs.filter(l => l.device === dev.label).slice(0,6);
+  $('detailEvents').innerHTML = evs.length ? evs.map(l => `
+    <div style="display:flex;gap:12px;padding:11px 0;border-top:1px solid var(--line2)">
+      <span class="sdot" style="background:${statusColor(l.level)};margin-top:6px"></span>
+      <div style="flex:1;min-width:0"><div style="font-size:12.5px;color:#c8d3e6">${esc(l.message)}</div>
+      <div class="mono" style="margin-top:3px;font-size:10px;color:var(--dim2)">${esc(l.time)} · ${esc((l.state||'').toUpperCase())}</div></div>
+    </div>`).join('') : `<div class="hint">ยังไม่มีเหตุการณ์ของอุปกรณ์นี้ในเซสชันนี้</div>`;
+}
+
+$('blApprove').addEventListener('click', ()=>{
+  const dev = findDetail(); if(!dev) return;
+  dev.bl.approved = !dev.bl.approved;
+  saveDevice(dev);
+  renderDetail();
+});
+$('blSnap').addEventListener('click', ()=>{
+  const dev = findDetail(); if(!dev) return;
+  dev.bl = { n: 30, mean: dev.value, m2: 30 * Math.pow(Math.max(0.5, blSd(dev.bl) || 1), 2), approved:true, daily: (dev.bl.daily||[]).slice(-30) };
+  saveDevice(dev);
+  renderDetail();
+});
+$('testLine').addEventListener('click', async ()=>{
+  const dev = findDetail(); if(!dev) return;
+  $('pushNote').textContent = 'SENDING…';
+  await sendAlarm(dev, tplOf(dev), statusFor(tplOf(dev), dev.value) === 'ok' ? 'warn' : statusFor(tplOf(dev), dev.value));
+  const last = logs[0];
+  $('pushNote').textContent = last ? `${(last.state||'').toUpperCase()} · ${last.time}` : 'READY';
+});
+
+/* ---------- render: health ---------- */
+function healthRowsData(){
+  return devices().map(d=>{
+    const tpl = tplOf(d), h = healthOf(d, tpl);
+    const tags = [];
+    if(h.useSrv) tags.push({ t: methodLabel(h.srv.method), bg:'rgba(0,229,255,.12)', fg:C.cy });
+    if(h.useSrv && isFinite(h.srv.daysToWarn) && h.srv.daysToWarn <= 30) tags.push({ t: h.srv.daysToWarn <= 0 ? 'เกินเกณฑ์แล้ว' : `พยากรณ์ ~${Math.round(h.srv.daysToWarn)} วัน`, bg:'rgba(255,176,32,.14)', fg:C.warn });
+    if(h.srv && h.srv.ok && h.srv.stale) tags.push({ t:`ผลเก่า ${Math.round(h.srv.ageDays)} วัน`, bg:'rgba(140,180,255,.1)', fg:'#8a97ad' });
+    if(h.z !== null && Math.abs(h.z) >= 2) tags.push({ t:`${h.z>=0?'+':''}${h.z.toFixed(1)}σ จาก BASELINE`, bg:'rgba(255,77,106,.14)', fg:C.alarm });
+    if(h.days !== null && h.days <= 30) tags.push({ t: h.days <= 0 ? 'เกินเกณฑ์แล้ว' : `ถึงเกณฑ์ ~${Math.round(h.days)} วัน`, bg:'rgba(255,176,32,.14)', fg:C.warn });
+    if(h.stale) tags.push({ t:'ค่าไม่อัปเดต', bg:'rgba(255,176,32,.14)', fg:C.warn });
+    if(!h.na && !h.ready) tags.push({ t:`เรียนรู้ ${d.bl.n}/30 จุด`, bg:'rgba(139,107,255,.16)', fg:'#cbc0ff' });
+    if(!h.na && h.ready && !d.bl.approved) tags.push({ t:'BASELINE รออนุมัติ', bg:'rgba(140,180,255,.1)', fg:'#8a97ad' });
+    if(!tags.length) tags.push({ t: h.na ? 'ไม่ใช้โมเดลตัวเลข' : 'อยู่ในช่วงปกติ', bg:'rgba(44,232,164,.12)', fg:C.ok });
+    return { d, tpl, h, tags };
+  }).sort((a,b)=> a.h.score - b.h.score);
+}
+
+function renderHealth(){
+  const rows = healthRowsData();
+  const num = rows.filter(r => !r.h.na);
+  const risky = num.filter(r => r.h.score < 70).length;
+  const pending = num.filter(r => r.h.ready && !r.d.bl.approved);
+  const learning = num.filter(r => !r.h.ready).length;
+
+  $('healthKpis').innerHTML = [
+    { lb:'คะแนนต่ำสุด', v: num.length ? String(num[0].h.score) : '—', u:'/ 100', nt: num.length ? num[0].d.label : 'ยังไม่มีอุปกรณ์ค่าตัวเลข', c: num.length ? num[0].h.color : C.ok },
+    { lb:'เสี่ยงสูง (ต่ำกว่า 70)', v:String(risky), u:'ตัว', nt:'ควรตรวจสอบก่อน', c: risky ? C.alarm : C.ok },
+    { lb:'Baseline รออนุมัติ', v:String(pending.length), u:'ตัว', nt:'เรียนรู้ครบแล้ว รอคนยืนยัน', c:C.vi },
+    { lb:'กำลังเรียนรู้', v:String(learning), u:'ตัว', nt:'ต้องมีข้อมูลปกติ 30 จุด', c:C.warn }
+  ].map(k => `<div class="kpi"><div class="lb">${esc(k.lb)}</div><div class="vl"><b style="color:${k.c}">${esc(k.v)}</b><span>${esc(k.u)}</span></div><div class="nt">${esc(k.nt)}</div></div>`).join('');
+
+  const filters = ['ทั้งหมด','เสี่ยงสูง','รออนุมัติ','กำลังเรียนรู้'];
+  $('healthFilters').innerHTML = filters.map(f => `<button class="pill ${f===healthFilter?'on':''}" data-hf="${esc(f)}">${esc(f)}</button>`).join('');
+  $('healthFilters').querySelectorAll('[data-hf]').forEach(b => b.addEventListener('click', ()=>{ healthFilter = b.dataset.hf; renderHealth(); }));
+
+  const shown = healthFilter === 'ทั้งหมด' ? rows
+    : healthFilter === 'เสี่ยงสูง' ? rows.filter(r => !r.h.na && r.h.score < 70)
+    : healthFilter === 'รออนุมัติ' ? rows.filter(r => !r.h.na && r.h.ready && !r.d.bl.approved)
+    : rows.filter(r => !r.h.na && !r.h.ready);
+
+  $('healthRows').innerHTML = shown.length ? shown.map(r=>{
+    const sd = blSd(r.d.bl);
+    const pool = r.d.hist.concat(r.h.ready ? [r.d.bl.mean-2*sd, r.d.bl.mean+2*sd] : []);
+    const lo = Math.min.apply(null, pool), hi = Math.max.apply(null, pool);
+    const yy = v => 30 - Math.max(0, Math.min(1, (v-lo)/((hi-lo)||1))) * 30;
+    const band = r.h.ready ? `<rect x="0" y="${yy(r.d.bl.mean+2*sd).toFixed(1)}" width="150" height="${Math.max(2, yy(r.d.bl.mean-2*sd)-yy(r.d.bl.mean+2*sd)).toFixed(1)}" fill="rgba(139,107,255,.16)"></rect>` : '';
+    return `<div class="trow health-grid">
+      <div class="scorecell"><b style="color:${r.h.color}">${r.h.na?'—':r.h.score}</b><span class="mini"><i style="width:${r.h.na?0:r.h.score}%;background:${r.h.color}"></i></span></div>
+      <div style="min-width:0"><div class="dv" style="cursor:pointer" data-open="${esc(r.d.id)}">${esc(r.d.label)}</div><div class="ms">${esc(r.d.loc)} · ${esc(r.tpl.name)}</div></div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${r.tags.map(t=>`<span class="tag" style="background:${t.bg};color:${t.fg}">${esc(t.t)}</span>`).join('')}</div>
+      <div style="height:30px"><svg viewBox="0 0 150 30" preserveAspectRatio="none" style="width:100%;height:100%;display:block;overflow:visible">${band}${polyline(r.d.hist,150,30,lo,hi,r.h.color)}</svg></div>
+      <button class="pill" data-open="${esc(r.d.id)}" style="justify-self:end">ตรวจสอบ</button>
+    </div>`;
+  }).join('') : `<div class="pb hint">ไม่มีอุปกรณ์ในเงื่อนไขนี้</div>`;
+  $('healthRows').querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', ()=> openDetail(b.dataset.open)));
+
+  $('pendingList').innerHTML = pending.length ? pending.map(r => `
+    <div style="display:flex;align-items:center;gap:11px;padding:12px 0;border-top:1px solid var(--line2)">
+      <div style="flex:1;min-width:0"><div class="dv">${esc(r.d.label)}</div>
+      <div class="mono" style="margin-top:3px;font-size:10.5px;color:#a99cff">${r.d.bl.mean.toFixed(1)} ± ${blSd(r.d.bl).toFixed(1)}${esc(r.tpl.unit)} · n=${r.d.bl.n}</div></div>
+      <button class="btn-vi" data-approve="${esc(r.d.id)}" style="flex:none;height:34px;padding:0 12px">อนุมัติ</button>
+    </div>`).join('') : `<div class="hint" style="margin-top:12px">ไม่มี baseline ที่รออนุมัติ</div>`;
+  $('pendingList').querySelectorAll('[data-approve]').forEach(b => b.addEventListener('click', ()=>{
+    const dev = devices().find(d => d.id === b.dataset.approve);
+    dev.bl.approved = true; saveDevice(dev); renderHealth();
+  }));
+
+  const fresh = rows.filter(r => r.h.na || !r.h.stale).length;
+  const days = Math.max.apply(null, [0].concat(rows.map(r => (r.d.bl.daily||[]).length)));
+  const hourlyMax = Math.max.apply(null, [0].concat(rows.map(r => (r.d.hourly||[]).length)));
+  const srvRows = rows.filter(r => r.h.useSrv);
+  const lstmRows = srvRows.filter(r => r.h.srv.method === 'lstm');
+  $('dataQuality').innerHTML = [
+    { nm:'อุปกรณ์ที่ค่าอัปเดตสด', c: fresh === rows.length ? C.ok : C.warn, vl:`${fresh}/${rows.length}` },
+    { nm:'จุดข้อมูลปกติที่เก็บได้', c:C.cy, vl: rows.reduce((a,r)=>a+(r.d.bl.n||0),0).toLocaleString() },
+    { nm:'ความยาวประวัติรายวัน', c: days >= 3 ? C.ok : C.warn, vl:`${days} วัน` },
+    { nm:'จุดรายชั่วโมงสำหรับโมเดล', c: hourlyMax >= 48 ? C.ok : C.warn, vl:`${hourlyMax}/168` },
+    { nm:'คะแนนจากเสิร์ฟเวอร์', c: srvRows.length ? C.ok : C.warn, vl:`${srvRows.length}/${rows.length} ตัว` },
+    { nm:'โมเดลที่ใช้จริง', c: lstmRows.length ? C.vi : C.cy, vl: srvRows.length ? (lstmRows.length ? `LSTM ×${lstmRows.length}` : 'HOLT-WINTERS') : 'ON-DEVICE' }
+  ].map(p => `<div class="rowline"><span class="sdot" style="background:${p.c}"></span><span class="nm">${esc(p.nm)}</span><span class="fill"></span><span class="vl">${esc(p.vl)}</span></div>`).join('');
+}
+
+/* ---------- render: alarms ---------- */
+function renderAlarms(){
+  const alarms = logs.filter(l => l.level === 'alarm').length;
+  const warns = logs.filter(l => l.level === 'warn').length;
+  const unack = logs.filter(l => !l.acked).length;
+  $('alarmKpis').innerHTML = [
+    { lb:'ทั้งหมดในเซสชันนี้', v:String(logs.length), c:'#e9f1fb' },
+    { lb:'ALARM', v:String(alarms), c:C.alarm },
+    { lb:'เฝ้าระวัง', v:String(warns), c:C.warn },
+    { lb:'ค้างรับทราบ', v:String(unack), c:C.vi }
+  ].map(k => `<div class="kpi"><div class="lb">${esc(k.lb)}</div><div class="vl"><b style="color:${k.c}">${esc(k.v)}</b></div></div>`).join('');
+
+  const filters = ['ทั้งหมด','ALARM','เฝ้าระวัง','ค้างรับทราบ'];
+  $('alarmFilters').innerHTML = filters.map(f => `<button class="pill ${f===alarmFilter?'on':''}" data-af="${esc(f)}">${esc(f)}</button>`).join('');
+  $('alarmFilters').querySelectorAll('[data-af]').forEach(b => b.addEventListener('click', ()=>{ alarmFilter = b.dataset.af; renderAlarms(); }));
+
+  const shown = alarmFilter === 'ทั้งหมด' ? logs
+    : alarmFilter === 'ALARM' ? logs.filter(l => l.level === 'alarm')
+    : alarmFilter === 'เฝ้าระวัง' ? logs.filter(l => l.level === 'warn')
+    : logs.filter(l => !l.acked);
+
+  $('alarmRows').innerHTML = shown.length ? shown.map(l => `
+    <div class="trow alarm-grid">
+      <div class="mono" style="font-size:11.5px;color:#8a97ad">${esc(l.time)}</div>
+      <div style="display:flex;gap:11px;align-items:center;min-width:0">
+        <div style="width:3px;height:26px;border-radius:2px;background:${statusColor(l.level)}"></div>
+        <div style="min-width:0"><div class="dv">${esc(l.device)}</div><div class="ms">${esc(l.message)}</div></div>
+      </div>
+      <div class="mono" style="font-size:11.5px;color:var(--dim)">${esc(l.scope||'')}</div>
+      <div class="mono" style="font-size:13px;color:${statusColor(l.level)}">${esc(l.value||'')}</div>
+      <div><button class="ackbtn" data-ack="${esc(l.id)}" ${l.acked?'disabled':''}>${l.acked?'รับทราบแล้ว':'กดรับทราบ'}</button></div>
+    </div>`).join('') : `<div class="pb hint">ยังไม่มีการแจ้งเตือน — ลองปรับค่าให้เกินเกณฑ์ในหน้าอุปกรณ์</div>`;
+  $('alarmRows').querySelectorAll('[data-ack]').forEach(b => b.addEventListener('click', ()=>{
+    const l = logs.find(x => x.id === b.dataset.ack);
+    if(l){ l.acked = true; renderAlarms(); renderUnack(); }
+  }));
+  renderUnack();
+}
+
+/* ---------- level / scope switches ---------- */
+async function switchLevel(lv){
+  level = lv;
+  if(lv === 'substation' && !subDevices.length) subDevices = await loadOrSeed('substation');
+  if(lv === 'district' && !districtDevices.length) districtDevices = await loadOrSeed('district');
+  detailId = null;
+  renderAll();
+  if(view === 'detail') setView('devices');
+}
+$('tabSubstation').addEventListener('click', ()=> switchLevel('substation'));
+$('tabDistrict').addEventListener('click', ()=> switchLevel('district'));
+$('stationSelect').addEventListener('change', async e=>{
+  district = e.target.value;
+  subDevices = await loadOrSeed('substation');
+  const keep = level; level = 'district';
+  districtDevices = await loadOrSeed('district');
+  level = keep;
+  detailId = null;
+  renderAll();
+});
+$('simSwitch').addEventListener('click', ()=>{
+  autoSim = !autoSim;
+  $('simSwitch').classList.toggle('on', autoSim);
+  $('simNote').textContent = autoSim ? `DRIFT ±0.7 / ${TICK_MS/1000}S` : 'MANUAL TEST MODE';
+});
+
+/* ---------- modal ---------- */
+let selectedTpl = null, editingId = null;
+function renderTplList(){
+  $('tplList').innerHTML = templates().map(t => `<div class="tplitem ${t.id===selectedTpl?'on':''}" data-tpl="${t.id}">
+    <b>${esc(t.name)}</b><span>${t.kind === 'numeric' ? `${t.min}–${t.max}${t.unit} · WARN ${t.warn}` : t.kind === 'toggle' ? 'เปิด / ปิด' : 'แจ้งเตือนสถานะ'}</span></div>`).join('');
+  $('tplList').querySelectorAll('[data-tpl]').forEach(el => el.addEventListener('click', ()=>{
+    selectedTpl = el.dataset.tpl; renderTplList(); checkValid();
+  }));
+  const t = templates().find(x => x.id === selectedTpl);
+  $('modalThresholds').innerHTML = t && t.kind === 'numeric'
+    ? `<span style="color:${C.warn}">${t.warn}${t.unit}</span> / <span style="color:${C.alarm}">${t.alarm}${t.unit}</span>`
+    : t ? 'ตามสถานะเปิด/ปิด' : '—';
+  $('modalScope').textContent = scopeKey();
+}
+function checkValid(){ $('confirmAdd').disabled = !(selectedTpl && $('deviceLabel').value.trim()); }
+$('deviceLabel').addEventListener('input', checkValid);
+
+function openAddModal(){
+  editingId = null; selectedTpl = null;
+  $('modalKicker').textContent = 'NEW DEVICE';
+  $('modalTitle').textContent = 'เพิ่มอุปกรณ์ใหม่';
+  $('confirmAdd').textContent = 'เพิ่มอุปกรณ์';
+  $('deviceLabel').value = ''; $('deviceLoc').value = '';
+  renderTplList(); checkValid();
+  $('overlay').classList.add('show');
+}
+function openEditModal(id){
+  const dev = devices().find(d => d.id === id); if(!dev) return;
+  editingId = id; selectedTpl = dev.tplId;
+  $('modalKicker').textContent = 'EDIT DEVICE';
+  $('modalTitle').textContent = 'แก้ไขอุปกรณ์';
+  $('confirmAdd').textContent = 'บันทึกการแก้ไข';
+  $('deviceLabel').value = dev.label; $('deviceLoc').value = dev.loc || '';
+  renderTplList(); checkValid();
+  $('overlay').classList.add('show');
+}
+$('openAdd').addEventListener('click', openAddModal);
+$('cancelAdd').addEventListener('click', ()=> $('overlay').classList.remove('show'));
+$('closeModal').addEventListener('click', ()=> $('overlay').classList.remove('show'));
+$('overlay').addEventListener('click', e=>{ if(e.target.id === 'overlay') $('overlay').classList.remove('show'); });
+
+$('confirmAdd').addEventListener('click', ()=>{
+  const tpl = templates().find(t => t.id === selectedTpl);
+  const label = $('deviceLabel').value.trim();
+  const loc = $('deviceLoc').value.trim() || '—';
+  const list = devices();
+  let dev;
+  if(editingId){
+    dev = list.find(d => d.id === editingId);
+    const changed = dev.tplId !== tpl.id;
+    dev.tplId = tpl.id; dev.label = label; dev.loc = loc;
+    if(changed){
+      const init = tpl.kind === 'numeric' ? (tpl.min + tpl.max) / 2.2 : 0;
+      dev.value = init; dev.hist = Array.from({length:12}, ()=> init); dev.bl = newBl();
+    }
+    dev.lastStatus = statusFor(tpl, dev.value);
+  } else {
+    const init = tpl.kind === 'numeric' ? (tpl.min + tpl.max) / 2.2 : 0;
+    dev = hydrate({
+      id: (level === 'substation' ? 'sd' : 'dd') + (seedCounter++) + '-' + Date.now(),
+      tplId: tpl.id, label, loc, value: init, status: statusFor(tpl, init)
+    });
+    list.push(dev);
+  }
+  setDevices(list);
+  saveDevice(dev, { hist:true });
+  $('overlay').classList.remove('show');
+  renderAll();
+});
+
+/* ---------- tick ---------- */
+function tick(){
+  if(!autoSim) return;
+  const list = devices();
+  list.forEach(dev=>{
+    const tpl = tplOf(dev);
+    if(tpl.kind !== 'numeric') return;
+    const drift = (Math.random() - 0.48) * 1.4;
+    applyValue(dev, Math.max(tpl.min - 2, Math.min(tpl.max + 4, dev.value + drift)));
+    const now = Date.now();
+    if(now - (dev._histSaved || 0) > HIST_PERSIST_MS){ dev._histSaved = now; saveDevice(dev, { hist:true }); }
+  });
+  if(view === 'dash') renderDash();
+  else if(view === 'devices') renderDevices();
+  else if(view === 'detail') renderDetail();
+  else if(view === 'health') renderHealth();
+}
+
+function renderAll(){
+  const t = (TITLES[view] || TITLES.dash)();
+  $('pageTitle').textContent = t[0];
+  $('pageSub').textContent = t[1];
+  renderScopeBar();
+  if(view === 'dash') renderDash();
+  if(view === 'devices') renderDevices();
+  if(view === 'detail') renderDetail();
+  if(view === 'health') renderHealth();
+  if(view === 'alarms') renderAlarms();
+  renderUnack();
+}
+
+window.__subeyeInit = async function(){
+  if(window.__subeyeReady) return;
+  window.__subeyeReady = true;
+  subDevices = await loadOrSeed('substation');
+  const keep = level; level = 'district';
+  districtDevices = await loadOrSeed('district');
+  level = keep;
+  setView('dash');
+  renderAll();
+  setInterval(tick, TICK_MS);
+};
+
+/* ---------- PWA ---------- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', async ()=>{
+    try{
+      const reg = await navigator.serviceWorker.register('sw.js');
+      // เจอเวอร์ชันใหม่ -> สั่งให้ sw ตัวใหม่ทำงานทันที
+      reg.addEventListener('updatefound', ()=>{
+        const nw = reg.installing;
+        if(nw) nw.addEventListener('statechange', ()=>{
+          if(nw.state === 'installed' && navigator.serviceWorker.controller) nw.postMessage('skipWaiting');
+        });
+      });
+      // sw ตัวใหม่คุมหน้าแล้ว -> รีโหลดหนึ่งครั้ง ให้ได้โค้ดใหม่โดยไม่ต้อง Ctrl+Shift+R
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+        if(reloaded) return; reloaded = true; location.reload();
+      });
+      reg.update();
+      setInterval(()=> reg.update(), 60 * 60 * 1000);
+    }catch(e){ /* ไม่ได้เสิร์ฟผ่าน http(s) */ }
+  });
+}
+</script>
+</body>
+</html>
