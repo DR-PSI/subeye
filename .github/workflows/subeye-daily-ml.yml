@@ -1,0 +1,57 @@
+name: SubEye Daily ML
+
+on:
+  schedule:
+    - cron: '0 21 * * *'     # 21:00 UTC = 04:00 เวลาไทย
+  workflow_dispatch:          # กดรันเองได้จากแท็บ Actions
+    inputs:
+      dry_run:
+        description: 'คำนวณแต่ไม่เขียนกลับ Firestore'
+        type: boolean
+        default: false
+
+concurrency:
+  group: subeye-ml
+  cancel-in-progress: false
+
+jobs:
+  train-and-forecast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: ติดตั้ง dependencies
+        run: pip install -r ml/requirements.txt
+
+      - name: กู้โมเดลที่เทรนไว้รอบก่อน
+        uses: actions/cache@v4
+        with:
+          path: ml/artifacts
+          key: subeye-models-${{ github.run_id }}
+          restore-keys: subeye-models-
+
+      - name: รันโมเดล
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          LINE_WEBHOOK_URL: ${{ secrets.LINE_WEBHOOK_URL }}
+          SUBEYE_SCOPES: ${{ vars.SUBEYE_SCOPES }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: python ml/daily_ml.py
+
+      - name: เก็บรายงานไว้ดูย้อนหลัง
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: subeye-ml-report
+          path: |
+            ml/artifacts/report.json
+            ml/artifacts/*.log
+          retention-days: 30
+          if-no-files-found: ignore
